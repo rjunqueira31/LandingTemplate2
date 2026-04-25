@@ -1,0 +1,97 @@
+<%- include('partials/head') %>
+  <%- include('partials/header') %>
+
+    <main class="bookings-page">
+      <div class="bookings-container">
+        <p class="section-subtitle" data-i18n="schedule_visit">Schedule your visit</p>
+        <h2 class="section-title" data-i18n="book_appointment">Book an Appointment</h2>
+
+        <div class="booking-form" id="bookingForm">
+          <!-- Step 1: Service -->
+          <div class="booking-step active" data-step="1">
+            <h3 class="step-label" data-i18n="step1_service">1. Choose a Service</h3>
+            <div class="service-options" id="serviceOptions"></div>
+          </div>
+
+          <!-- Step 2: Date -->
+          <div class="booking-step" data-step="2">
+            <h3 class="step-label" data-i18n="step2_date">2. Pick a Date</h3>
+            <div class="calendar-container">
+              <div class="calendar-header">
+                <button class="cal-nav" id="calPrev"><i class="fas fa-chevron-left"></i></button>
+                <span class="cal-month" id="calMonth"></span>
+                <button class="cal-nav" id="calNext"><i class="fas fa-chevron-right"></i></button>
+              </div>
+              <div class="calendar-weekdays">
+                <span data-i18n="mon">Mon</span><span data-i18n="tue">Tue</span><span data-i18n="wed">Wed</span><span
+                  data-i18n="thu">Thu</span><span data-i18n="fri">Fri</span><span data-i18n="sat">Sat</span><span
+                  data-i18n="sun">Sun</span>
+              </div>
+              <div class="calendar-days" id="calDays"></div>
+            </div>
+          </div>
+
+          <!-- Step 3: Time -->
+          <div class="booking-step" data-step="3">
+            <h3 class="step-label" data-i18n="step3_time">3. Choose a Time</h3>
+            <div class="slots-grid" id="slotsGrid"></div>
+            <p class="slots-empty" id="slotsEmpty" style="display:none;" data-i18n="no_slots">No available slots for
+              this date.</p>
+          </div>
+
+          <!-- Step 4: Details -->
+          <div class="booking-step" data-step="4">
+            <h3 class="step-label" data-i18n="step4_details">4. Your Details</h3>
+            <div class="details-form">
+              <div class="form-group">
+                <label for="customerName" data-i18n="name">Name</label>
+                <input type="text" id="customerName" data-i18n-placeholder="your_name" placeholder="Your name"
+                  maxlength="100" required>
+              </div>
+              <div class="form-group">
+                <label for="customerPhone" data-i18n="phone">Phone</label>
+                <input type="tel" id="customerPhone" data-i18n-placeholder="your_phone" placeholder="Your phone number"
+                  maxlength="30" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary & Confirm -->
+          <div class="booking-summary" id="bookingSummary" style="display:none;">
+            <div class="summary-card">
+              <h3 data-i18n="booking_summary">Booking Summary</h3>
+              <p><strong data-i18n="service_label">Service:</strong> <span id="sumService"></span></p>
+              <p><strong data-i18n="date_label">Date:</strong> <span id="sumDate"></span></p>
+              <p><strong data-i18n="time_label">Time:</strong> <span id="sumTime"></span></p>
+              <p><strong data-i18n="name_label">Name:</strong> <span id="sumName"></span></p>
+              <p><strong data-i18n="phone_label">Phone:</strong> <span id="sumPhone"></span></p>
+            </div>
+          </div>
+
+          <div class="booking-actions">
+            <button class="btn btn-back" id="btnBack" style="display:none;" data-i18n="back">Back</button>
+            <button class="btn btn-next" id="btnNext" disabled data-i18n="next">Next</button>
+          </div>
+
+          <!-- Success -->
+          <div class="booking-success" id="bookingSuccess" style="display:none;">
+            <i class="fas fa-check-circle"></i>
+            <h3 data-i18n="booking_confirmed">Booking Confirmed!</h3>
+            <p id="successMessage"></p>
+            <button class="btn btn-next" id="btnNewBooking" data-i18n="book_another">Book Another</button>
+          </div>
+
+          <!-- Error -->
+          <p class="booking-error" id="bookingError" style="display:none;"></p>
+        </div>
+      </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+      <script src="/public/js/bookings.js"></script>
+      <script src="/public/js/main.js"></script>
+      <script>i18n.init();</script>
+      </body>
+
+      </html>

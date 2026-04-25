@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — <%= company.companyName %>
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/public/css/admin.css">
+    <script src="/public/js/i18n.js"></script>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>
+                    <%= company.companyName %>
+                </h2>
+                <span class="badge" data-i18n="<%= role==='admin' ? 'admin' : 'employee' %>">
+                    <%= role==='admin' ? 'Admin' : 'Employee' %>
+                </span>
+            </div>
+            <nav class="sidebar-nav">
+                <% var firstPage=company.pages.bookings ? 'bookings' : company.pages.vacations ? 'vacations' :
+                    (role==='admin' ? 'content' : 'settings' ); %>
+                    <% if (company.pages.bookings) { %>
+                        <a href="#" class="nav-item<%= firstPage==='bookings' ? ' active' : '' %>" data-page="bookings">
+                            <i class="fas fa-calendar-alt"></i> <span data-i18n="bookings_page">Bookings</span>
+                        </a>
+                        <% } %>
+                            <% if (company.pages.vacations) { %>
+                                <a href="#" class="nav-item<%= firstPage==='vacations' ? ' active' : '' %>"
+                                    data-page="vacations">
+                                    <i class="fas fa-umbrella-beach"></i> <span
+                                        data-i18n="vacations_page">Vacations</span>
+                                </a>
+                                <% } %>
+                                    <% if (role==='admin' ) { %>
+                                        <a href="#" class="nav-item<%= firstPage==='content' ? ' active' : '' %>"
+                                            data-page="content">
+                                            <i class="fas fa-pen-fancy"></i> <span
+                                                data-i18n="content_page">Content</span>
+                                        </a>
+                                        <a href="#" class="nav-item" data-page="users">
+                                            <i class="fas fa-users"></i> <span data-i18n="users_page">Users</span>
+                                        </a>
+                                        <% } %>
+                                            <a href="#" class="nav-item<%= firstPage==='settings' ? ' active' : '' %>"
+                                                data-page="settings">
+                                                <i class="fas fa-cog"></i> <span
+                                                    data-i18n="settings_page">Settings</span>
+                                            </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="sidebar-user"><i class="fas fa-user"></i>
+                    <%= username %>
+                </span>
+                <div class="lang-toggle">
+                    <button class="lang-btn" data-lang="en">EN</button>
+                    <button class="lang-btn" data-lang="pt">PT</button>
+                </div>
+                <a href="/" target="_blank"><i class="fas fa-external-link-alt"></i> <span data-i18n="view_site">View
+                        Site</span></a>
+                <a href="/admin/logout"><i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span></a>
+            </div>
+        </aside>
+
+        <!-- Mobile header -->
+        <div class="mobile-header">
+            <button class="mobile-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+            <span data-i18n="admin">Admin</span>
+            <a href="/admin/logout"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+
+        <!-- Main content -->
+        <main class="admin-main">
+            <!-- Bookings page -->
+            <% if (company.pages.bookings) { %>
+                <div class="admin-page<%= firstPage==='bookings' ? ' active' : '' %>" id="page-bookings">
+                    <div class="page-top">
+                        <h1 data-i18n="bookings_page">Bookings</h1>
+                        <button class="btn-primary" id="btnAddBooking"><i class="fas fa-plus"></i> <span
+                                data-i18n="add_booking">Add Booking</span></button>
+                    </div>
+
+                    <!-- Week navigation + Day tabs -->
+                    <div class="week-and-days">
+                        <div class="week-nav">
+                            <button class="btn-icon" id="weekPrev"><i class="fas fa-chevron-left"></i></button>
+                            <span id="weekLabel"></span>
+                            <button class="btn-icon" id="weekNext"><i class="fas fa-chevron-right"></i></button>
+                            <button class="btn-small" id="weekToday" data-i18n="today">Today</button>
+                            <button class="btn-icon week-nav-date-btn" id="weekDateBtn"><i
+                                    class="fas fa-calendar-alt"></i></button>
+                            <input type="date" id="weekDatePicker" class="week-date-picker-hidden">
+                        </div>
+
+                        <div class="day-tabs" id="dayTabs"></div>
+
+                        <!-- Mobile single-day nav (visible at ≤415px) -->
+                        <div class="day-nav-mobile" id="dayNavMobile">
+                            <button class="btn-icon" id="dayPrev"><i class="fas fa-chevron-left"></i></button>
+                            <span class="day-nav-label" id="dayNavLabel"></span>
+                            <button class="btn-icon" id="dayNext"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Day timeline -->
+                    <div class="day-timeline" id="dayTimeline"></div>
+                </div>
+                <% } %>
+
+                    <!-- Vacations page -->
+                    <% if (company.pages.vacations) { %>
+                        <div class="admin-page<%= firstPage==='vacations' ? ' active' : '' %>" id="page-vacations">
+                            <div class="page-top">
+                                <h1 data-i18n="vacations_page">Vacations</h1>
+                                <div class="vacation-month-nav">
+                                    <button class="btn-icon" id="vacMonthPrev"><i
+                                            class="fas fa-chevron-left"></i></button>
+                                    <span id="vacMonthLabel"></span>
+                                    <button class="btn-icon" id="vacMonthNext"><i
+                                            class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                            <div class="vacation-summary" id="vacationSummary"></div>
+                            <div class="vacation-calendar-wrap" id="vacationCalendarWrap"></div>
+                            <div class="vacation-actions" id="vacationActions" style="display:none;">
+                                <button class="btn-primary" id="vacSaveBtn"><i class="fas fa-check"></i> <span
+                                        data-i18n="save">Save</span></button>
+                                <span class="vac-changes-count" id="vacChangesCount"></span>
+                            </div>
+                        </div>
+                        <% } %>
+
+                            <!-- Content page (admin only) -->
+                            <% if (role==='admin' ) { %>
+                                <div class="admin-page<%= firstPage==='content' ? ' active' : '' %>" id="page-content">
+                                    <h1 data-i18n="content_page">Content</h1>
+
+                                    <!-- Content sub-navigation -->
+                                    <div class="content-tabs">
+                                        <button class="content-tab active" data-section="company-info"><i
+                                                class="fas fa-building"></i> <span data-i18n="cnt_company_info">Company
+                                                Info</span></button>
+                                        <button class="content-tab" data-section="about-texts"><i
+                                                class="fas fa-align-left"></i> <span
+                                                data-i18n="cnt_about">About</span></button>
+                                        <button class="content-tab" data-section="services-list"><i
+                                                class="fas fa-concierge-bell"></i> <span
+                                                data-i18n="cnt_services">Services</span></button>
+                                        <button class="content-tab" data-section="gallery-images"><i
+                                                class="fas fa-images"></i> <span
+                                                data-i18n="cnt_gallery">Gallery</span></button>
+                                        <button class="content-tab" data-section="carousel-images"><i
+                                                class="fas fa-photo-video"></i> <span
+                                                data-i18n="cnt_carousel">Carousel</span></button>
+                                        <button class="content-tab" data-section="about-images"><i
+                                                class="fas fa-image"></i> <span data-i18n="cnt_about_images">About
+                                                Images</span></button>
+                                        <button class="content-tab" data-section="partner-images"><i
+                                                class="fas fa-handshake"></i> <span
+                                                data-i18n="cnt_partners">Partners</span></button>
+                                        <button class="content-tab" data-section="logo-image"><i
+                                                class="fas fa-stamp"></i> <span
+                                                data-i18n="cnt_logo">Logo</span></button>
+                                    </div>
+
+                                    <!-- Company Info section -->
+                                    <div class="content-section active" id="section-company-info">
+                                        <div class="content-card">
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_company_name">Company Name</label>
+                                                <input type="text" id="cntCompanyName" maxlength="200">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_email">Email</label>
+                                                <input type="email" id="cntCompanyEmail" maxlength="200">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_phone">Phone</label>
+                                                <input type="text" id="cntCompanyPhone" maxlength="200">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_address">Address</label>
+                                                <input type="text" id="cntCompanyAddress" maxlength="500">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_schedule">Schedule</label>
+                                                <input type="text" id="cntCompanySchedule" maxlength="300">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_slogan">Slogan</label>
+                                                <input type="text" id="cntCompanySlogan" maxlength="500">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_slogan_sub">Slogan Subtitle</label>
+                                                <input type="text" id="cntCompanySloganSub" maxlength="200">
+                                            </div>
+                                            <div class="form-group">
+                                                <label data-i18n="cnt_disclaimer">Disclaimer / Footer</label>
+                                                <input type="text" id="cntCompanyDisclaimer" maxlength="500">
+                                            </div>
+                                            <button class="btn-primary" id="btnSaveCompanyInfo"
+                                                data-i18n="save">Save</button>
+                                            <span class="content-msg" id="companyInfoMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- About Texts section -->
+                                    <div class="content-section" id="section-about-texts">
+                                        <div class="content-card">
+                                            <div id="aboutTextsContainer"></div>
+                                            <div class="content-actions">
+                                                <button class="btn-secondary" id="btnAddAboutText"><i
+                                                        class="fas fa-plus"></i> <span data-i18n="cnt_add_text">Add
+                                                        Text</span></button>
+                                                <button class="btn-primary" id="btnSaveAboutTexts"
+                                                    data-i18n="save">Save</button>
+                                            </div>
+                                            <span class="content-msg" id="aboutTextsMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Services section -->
+                                    <div class="content-section" id="section-services-list">
+                                        <div class="content-card">
+                                            <div id="servicesContainer"></div>
+                                            <div class="content-actions">
+                                                <button class="btn-secondary" id="btnAddService"><i
+                                                        class="fas fa-plus"></i> <span data-i18n="cnt_add_service">Add
+                                                        Service</span></button>
+                                                <button class="btn-primary" id="btnSaveServices"
+                                                    data-i18n="save">Save</button>
+                                            </div>
+                                            <span class="content-msg" id="servicesMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gallery Images section -->
+                                    <div class="content-section" id="section-gallery-images">
+                                        <div class="content-card">
+                                            <div class="image-upload-area" id="galleryUploadArea">
+                                                <input type="file" id="galleryFileInput" multiple accept="image/*"
+                                                    class="file-input-hidden">
+                                                <button class="btn-secondary" id="btnUploadGallery"><i
+                                                        class="fas fa-cloud-upload-alt"></i> <span
+                                                        data-i18n="cnt_upload">Upload Images</span></button>
+                                                <span class="upload-hint" data-i18n="cnt_upload_hint_gallery">Max 50
+                                                    images, 5MB each</span>
+                                            </div>
+                                            <div class="image-grid" id="galleryGrid"></div>
+                                            <span class="content-msg" id="galleryMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Carousel Images section -->
+                                    <div class="content-section" id="section-carousel-images">
+                                        <div class="content-card">
+                                            <div class="image-upload-area">
+                                                <input type="file" id="carouselFileInput" multiple accept="image/*"
+                                                    class="file-input-hidden">
+                                                <button class="btn-secondary" id="btnUploadCarousel"><i
+                                                        class="fas fa-cloud-upload-alt"></i> <span
+                                                        data-i18n="cnt_upload">Upload Images</span></button>
+                                                <span class="upload-hint" data-i18n="cnt_upload_hint_carousel">Max 10
+                                                    images, 5MB each</span>
+                                            </div>
+                                            <div class="image-grid" id="carouselGrid"></div>
+                                            <span class="content-msg" id="carouselMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- About Images section -->
+                                    <div class="content-section" id="section-about-images">
+                                        <div class="content-card">
+                                            <div class="image-upload-area">
+                                                <input type="file" id="aboutImgFileInput" multiple accept="image/*"
+                                                    class="file-input-hidden">
+                                                <button class="btn-secondary" id="btnUploadAboutImg"><i
+                                                        class="fas fa-cloud-upload-alt"></i> <span
+                                                        data-i18n="cnt_upload">Upload Images</span></button>
+                                                <span class="upload-hint" data-i18n="cnt_upload_hint_about">Max 10
+                                                    images, 5MB each</span>
+                                            </div>
+                                            <div class="image-grid" id="aboutImgGrid"></div>
+                                            <span class="content-msg" id="aboutImgMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Partner Images section -->
+                                    <div class="content-section" id="section-partner-images">
+                                        <div class="content-card">
+                                            <div class="image-upload-area">
+                                                <input type="file" id="partnerFileInput" multiple accept="image/*"
+                                                    class="file-input-hidden">
+                                                <button class="btn-secondary" id="btnUploadPartner"><i
+                                                        class="fas fa-cloud-upload-alt"></i> <span
+                                                        data-i18n="cnt_upload">Upload Images</span></button>
+                                                <span class="upload-hint" data-i18n="cnt_upload_hint_partners">Max 20
+                                                    images, 2MB each</span>
+                                            </div>
+                                            <div class="image-grid" id="partnerGrid"></div>
+                                            <span class="content-msg" id="partnerMsg"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Logo section -->
+                                    <div class="content-section" id="section-logo-image">
+                                        <div class="content-card">
+                                            <div class="image-upload-area">
+                                                <input type="file" id="logoFileInput" accept="image/*"
+                                                    class="file-input-hidden">
+                                                <button class="btn-secondary" id="btnUploadLogo"><i
+                                                        class="fas fa-cloud-upload-alt"></i> <span
+                                                        data-i18n="cnt_upload_logo">Upload Logo</span></button>
+                                                <span class="upload-hint" data-i18n="cnt_upload_hint_logo">1 image, max
+                                                    2MB. Replaces existing.</span>
+                                            </div>
+                                            <div class="image-grid" id="logoGrid"></div>
+                                            <span class="content-msg" id="logoMsg"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% } %>
+
+                                    <!-- Settings page -->
+                                    <div class="admin-page<%= firstPage==='settings' ? ' active' : '' %>"
+                                        id="page-settings">
+                                        <h1 data-i18n="settings_page">Settings</h1>
+                                        <div class="settings-section">
+                                            <h3 data-i18n="change_password">Change Password</h3>
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label data-i18n="current_password">Current Password</label>
+                                                    <div class="password-wrap">
+                                                        <input type="password" id="currentPassword">
+                                                        <button type="button" class="toggle-pw" tabindex="-1"><i
+                                                                class="fas fa-eye"></i></button>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label data-i18n="new_password">New Password</label>
+                                                    <div class="password-wrap">
+                                                        <input type="password" id="newPassword" minlength="6">
+                                                        <button type="button" class="toggle-pw" tabindex="-1"><i
+                                                                class="fas fa-eye"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button class="btn-primary" id="btnChangePassword"
+                                                data-i18n="update_password">Update
+                                                Password</button>
+                                            <p class="settings-msg" id="passwordMsg"></p>
+                                        </div>
+                                    </div>
+
+                                    <% if (role==='admin' ) { %>
+                                        <!-- Users page (admin only) -->
+                                        <div class="admin-page<%= firstPage==='users' ? ' active' : '' %>"
+                                            id="page-users">
+                                            <div class="page-top">
+                                                <h1 data-i18n="users_page">Users</h1>
+                                                <button class="btn-primary" id="btnAddUser"><i class="fas fa-plus"></i>
+                                                    <span data-i18n="add_user">Add User</span></button>
+                                            </div>
+                                            <div class="users-table-wrap">
+                                                <table class="users-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th data-i18n="username">Username</th>
+                                                            <th data-i18n="role">Role</th>
+                                                            <th data-i18n="vac_total">Total</th>
+                                                            <th data-i18n="vac_used">Used</th>
+                                                            <th data-i18n="vac_booked">Booked</th>
+                                                            <th data-i18n="vac_remaining">Remaining</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="usersTableBody"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <% } %>
+        </main>
+    </div>
+
+    <!-- Modal for add/edit booking -->
+    <% if (company.pages.bookings) { %>
+        <div class="modal-overlay" id="bookingModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="modalTitle" data-i18n="add_booking">Add Booking</h3>
+                    <button class="modal-close" id="modalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="modalBookingId">
+                    <div class="form-group">
+                        <label data-i18n="service">Service</label>
+                        <select id="modalService"></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label data-i18n="date">Date</label>
+                            <input type="date" id="modalDate">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="time">Time</label>
+                            <input type="time" id="modalTime" step="1800">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="customer_name">Customer Name</label>
+                        <input type="text" id="modalName" data-i18n-placeholder="customer_name" placeholder="Name"
+                            maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="phone">Phone</label>
+                        <input type="tel" id="modalPhone" data-i18n-placeholder="phone_number"
+                            placeholder="Phone number" maxlength="30">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="notes">Notes</label>
+                        <textarea id="modalNotes" rows="2" maxlength="500" data-i18n-placeholder="optional_notes"
+                            placeholder="Optional notes"></textarea>
+                    </div>
+                </div>
+                <div id="modalError" class="modal-error" style="display:none;"></div>
+                <div class="modal-footer">
+                    <button class="btn-danger" id="modalDelete" style="display:none;" data-i18n="delete">Delete</button>
+                    <div class="modal-footer-right">
+                        <button class="btn-primary" id="modalSave" data-i18n="save">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+            <% if (role==='admin' ) { %>
+                <!-- Modal for add user -->
+                <div class="modal-overlay" id="userModal">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h3 data-i18n="add_user">Add User</h3>
+                            <button class="modal-close" id="userModalClose">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label data-i18n="username">Username</label>
+                                <input type="text" id="userModalUsername" data-i18n-placeholder="eg_john"
+                                    placeholder="e.g. john" maxlength="50" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="password">Password</label>
+                                <div class="password-wrap">
+                                    <input type="password" id="userModalPassword" data-i18n-placeholder="min_6_chars"
+                                        placeholder="Min 6 characters" maxlength="100" autocomplete="off">
+                                    <button type="button" class="toggle-pw" tabindex="-1"><i
+                                            class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="role">Role</label>
+                                <select id="userModalRole">
+                                    <option value="employee">Employee</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="vacation_days">Vacation Days</label>
+                                <input type="number" id="userModalVacationDays" min="0" max="365" placeholder="22">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="modal-footer-right">
+                                <button class="btn-secondary" id="userModalCancel" data-i18n="cancel">Cancel</button>
+                                <button class="btn-primary" id="userModalSave" data-i18n="create_user">Create
+                                    User</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
+                    <script>var USER_ROLE = '<%= role %>'; var USER_ID = <%= userId %>; var PAGES = <%- JSON.stringify(company.pages) %>;</script>
+                    <script src="/public/js/admin.js"></script>
+                    <script>i18n.init();</script>
+</body>
+
+</html>

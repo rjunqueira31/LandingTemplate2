@@ -1,0 +1,56 @@
+<footer>
+    <div class="footer-content">
+        <div class="footer-section">
+            <h4 data-i18n="contact">Contact</h4>
+            <p><i class="fas fa-map-marker-alt"></i>
+                <%= company.companyAddress %>
+            </p>
+            <% company.companyPhoneNumbers.forEach(function(phone) { %>
+                <p><i class="fas fa-phone"></i> <a href="tel:<%= phone.replace(/\s/g, '') %>">
+                        <%= phone %>
+                    </a></p>
+                <% }); %>
+                    <p><i class="fas fa-envelope"></i> <a href="mailto:<%= company.companyEmail %>">
+                            <%= company.companyEmail %>
+                        </a></p>
+                    <p><i class="fas fa-clock"></i>
+                        <%= company.companySchedule %>
+                    </p>
+        </div>
+
+        <div class="footer-section">
+            <h4 data-i18n="follow_us">Follow Us</h4>
+            <div class="social-links">
+                <% const socialIcons={ whatsapp: 'fab fa-whatsapp' , instagram: 'fab fa-instagram' ,
+                    facebook: 'fab fa-facebook-f' , x: 'fab fa-x-twitter' , linkedin: 'fab fa-linkedin-in' ,
+                    youtube: 'fab fa-youtube' , tiktok: 'fab fa-tiktok' , github: 'fab fa-github' ,
+                    pinterest: 'fab fa-pinterest-p' }; %>
+                    <% Object.entries(company.socialMedia).forEach(function([platform, url]) { %>
+                        <% if (url) { %>
+                            <% let href=url; if (platform==='whatsapp' ) href='https://wa.me/' +
+                                url.replace(/[^0-9]/g, '' ); else if (!url.startsWith('http')) href='https://' + url; %>
+                                <a href="<%= href %>" target="_blank" rel="noopener noreferrer"
+                                    aria-label="<%= platform %>">
+                                    <i class="<%= socialIcons[platform] || 'fas fa-link' %>"></i>
+                                </a>
+                                <% } %>
+                                    <% }); %>
+            </div>
+        </div>
+
+        <div class="footer-section">
+            <h4>
+                <%= company.companyName %>
+            </h4>
+            <p>
+                <%= company.companySlogan %>
+            </p>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p>
+            <%= company.companyDisclaimer %>
+        </p>
+    </div>
+</footer>

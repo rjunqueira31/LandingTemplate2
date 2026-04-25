@@ -1,0 +1,5 @@
+{
+  "username": "admin",
+  "passwordHash": "$2a$17$OCJTyPWjHexE88rpwEQOwOMZRjrCSgNqhgRlWasIy6N8sKE49Uy1W",
+  "sessionSecret": "change-this-to-a-random-string-in-production"
+}

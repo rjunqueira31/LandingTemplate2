@@ -1,0 +1,88 @@
+<% const navItems=[]; navItems.push({ label: 'Home' , type: 'section' , target: 'home' , i18nKey: 'nav_home' }); if
+    (company.pages.aboutUs) navItems.push({ label: 'About' , type: 'section' , target: 'about' , i18nKey: 'nav_about'
+    }); if (company.pages.services) navItems.push({ label: 'Services' , type: 'section' , target: 'services' ,
+    i18nKey: 'nav_services' }); if (company.pages.partners) navItems.push({ label: 'Partners' , type: 'section' ,
+    target: 'partners' , i18nKey: 'nav_partners' }); if (company.pages.gallery) navItems.push({ label: 'Gallery' ,
+    type: 'page' , target: '/gallery' , i18nKey: 'nav_gallery' }); if (company.pages.bookings) navItems.push({
+    label: 'Bookings' , type: 'page' , target: '/bookings' , i18nKey: 'nav_bookings' }); const
+    mid=Math.ceil(navItems.length / 2); const leftItems=navItems.slice(0, mid); const rightItems=navItems.slice(mid);
+    const isHome=currentPath==='/' ; %>
+
+    <header class="<%= currentPath !== '/' ? 'scrolled' : '' %>">
+        <nav>
+            <div class="nav-left">
+                <% leftItems.forEach(function(item) { %>
+                    <% if (item.type==='section' ) { %>
+                        <a href="<%= isHome ? '#' + item.target : '/#' + item.target %>"
+                            data-section="<%= item.target %>" data-i18n="<%= item.i18nKey %>"
+                            class="nav-link <%= (isHome && item.target === 'home') ? 'active' : '' %>">
+                            <%= item.label %>
+                        </a>
+                        <% } else { %>
+                            <a href="<%= item.target %>" data-i18n="<%= item.i18nKey %>"
+                                class="nav-link <%= currentPath === item.target ? 'active' : '' %>">
+                                <%= item.label %>
+                            </a>
+                            <% } %>
+                                <% }); %>
+            </div>
+
+            <div class="nav-logo">
+                <a href="/">
+                    <% if (logoImage) { %>
+                        <img src="/images/logo/<%= logoImage %>" alt="<%= company.companyName %>">
+                        <% } else { %>
+                            <span>
+                                <%= company.companyName %>
+                            </span>
+                            <% } %>
+                </a>
+            </div>
+
+            <div class="nav-right">
+                <% rightItems.forEach(function(item) { %>
+                    <% if (item.type==='section' ) { %>
+                        <a href="<%= isHome ? '#' + item.target : '/#' + item.target %>"
+                            data-section="<%= item.target %>" data-i18n="<%= item.i18nKey %>" class="nav-link">
+                            <%= item.label %>
+                        </a>
+                        <% } else { %>
+                            <a href="<%= item.target %>" data-i18n="<%= item.i18nKey %>"
+                                class="nav-link <%= currentPath === item.target ? 'active' : '' %>">
+                                <%= item.label %>
+                            </a>
+                            <% } %>
+                                <% }); %>
+            </div>
+
+            <button class="hamburger" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="lang-toggle">
+                <button class="lang-btn" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="pt">PT</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu-overlay"></div>
+    <div class="mobile-menu">
+        <% navItems.forEach(function(item) { %>
+            <% if (item.type==='section' ) { %>
+                <a href="<%= isHome ? '#' + item.target : '/#' + item.target %>" data-section="<%= item.target %>"
+                    data-i18n="<%= item.i18nKey %>">
+                    <%= item.label %>
+                </a>
+                <% } else { %>
+                    <a href="<%= item.target %>" data-i18n="<%= item.i18nKey %>">
+                        <%= item.label %>
+                    </a>
+                    <% } %>
+                        <% }); %>
+                            <div class="lang-toggle">
+                                <button class="lang-btn" data-lang="en">EN</button>
+                                <button class="lang-btn" data-lang="pt">PT</button>
+                            </div>
+    </div>

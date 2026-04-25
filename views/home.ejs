@@ -1,0 +1,157 @@
+<%- include('partials/head') %>
+    <%- include('partials/header') %>
+
+        <main>
+            <!-- ======================== -->
+            <!-- HERO / CAROUSEL SECTION  -->
+            <!-- ======================== -->
+            <section id="home" class="hero">
+                <div class="carousel-container">
+                    <% if (carouselImages.length> 0) { %>
+                        <% carouselImages.forEach(function(img, i) { %>
+                            <div class="carousel-slide <%= i === 0 ? 'active' : '' %>">
+                                <img src="/images/carousel/<%= img %>" alt="<%= company.companyName %>">
+                            </div>
+                            <% }); %>
+                                <% } else { %>
+                                    <div class="carousel-slide active carousel-placeholder"></div>
+                                    <% } %>
+                </div>
+
+                <div class="hero-overlay">
+                    <% if (company.companySloganSubtitle) { %>
+                        <p class="hero-label">
+                            <%= company.companySloganSubtitle %>
+                        </p>
+                        <% } %>
+                            <h1 class="hero-slogan">
+                                <%= company.companySlogan %>
+                            </h1>
+                </div>
+
+                <% if (carouselImages.length> 1) { %>
+                    <button class="carousel-btn prev" aria-label="Previous slide">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="carousel-btn next" aria-label="Next slide">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <% } %>
+            </section>
+
+            <!-- ======================== -->
+            <!-- ABOUT US SECTION         -->
+            <!-- ======================== -->
+            <% if (company.pages.aboutUs) { %>
+                <section id="about" class="section">
+                    <p class="section-subtitle" data-i18n="get_to_know_us">Get to know us</p>
+                    <h2 class="section-title" data-i18n="about_us">About Us</h2>
+
+                    <div class="about-content">
+                        <% const texts=company.companyAboutUsTexts || []; const images=aboutImages || []; const
+                            paired=Math.min(texts.length, images.length); const extraTexts=texts.slice(paired); const
+                            extraImages=images.slice(paired); /* Paired rows: text + image, alternating sides */ for
+                            (let i=0; i < paired; i++) { const rowClass=(i % 2===0) ? '' : 'image-first' ; %>
+                            <div class="about-row <%= rowClass %>">
+                                <div class="about-text">
+                                    <p>
+                                        <%= texts[i] %>
+                                    </p>
+                                </div>
+                                <div class="about-image"><img src="/images/about/<%= images[i] %>" alt="About us"
+                                        loading="lazy"></div>
+                            </div>
+                            <% } /* Extra texts (more texts than images): pair them two per row */ for (let i=0; i <
+                                extraTexts.length; i +=2) { const hasSecond=(i + 1) < extraTexts.length; %>
+                                <div class="about-row same-type <%= !hasSecond ? 'centered' : '' %>">
+                                    <div class="about-text">
+                                        <p>
+                                            <%= extraTexts[i] %>
+                                        </p>
+                                    </div>
+                                    <% if (hasSecond) { %>
+                                        <div class="about-text">
+                                            <p>
+                                                <%= extraTexts[i + 1] %>
+                                            </p>
+                                        </div>
+                                        <% } %>
+                                </div>
+                                <% } /* Extra images (more images than texts): pair them two per row */ for (let i=0; i
+                                    < extraImages.length; i +=2) { const hasSecond=(i + 1) < extraImages.length; %>
+                                    <div class="about-row same-type <%= !hasSecond ? 'centered' : '' %>">
+                                        <div class="about-image"><img src="/images/about/<%= extraImages[i] %>"
+                                                alt="About us" loading="lazy"></div>
+                                        <% if (hasSecond) { %>
+                                            <div class="about-image"><img src="/images/about/<%= extraImages[i + 1] %>"
+                                                    alt="About us" loading="lazy"></div>
+                                            <% } %>
+                                    </div>
+                                    <% } %>
+                    </div>
+                </section>
+                <% } %>
+
+                    <!-- ======================== -->
+                    <!-- SERVICES SECTION         -->
+                    <!-- ======================== -->
+                    <% if (company.pages.services) { %>
+                        <section id="services" class="section">
+                            <p class="section-subtitle" data-i18n="what_we_offer">What we offer</p>
+                            <h2 class="section-title" data-i18n="services">Services</h2>
+
+                            <div class="services-grid">
+                                <% (company.companyServiceList || []).forEach(function(service) { %>
+                                    <div class="service-card">
+                                        <h3>
+                                            <%= service.title %>
+                                        </h3>
+                                        <p>
+                                            <%= service.description %>
+                                        </p>
+                                        <% if (service.price) { %>
+                                            <span class="price">
+                                                <%= service.price %>
+                                            </span>
+                                            <% } %>
+                                    </div>
+                                    <% }); %>
+                            </div>
+                        </section>
+                        <% } %>
+
+                            <!-- ======================== -->
+                            <!-- PARTNERS SECTION         -->
+                            <!-- ======================== -->
+                            <% if (company.pages.partners && partnerImages.length> 0) { %>
+                                <section id="partners" class="section-full">
+                                    <p class="section-subtitle" data-i18n="trusted_by">Trusted by</p>
+                                    <h2 class="section-title" data-i18n="partners">Partners</h2>
+
+                                    <div class="partners-wrapper">
+                                        <div class="partners-track">
+                                            <% partnerImages.forEach(function(img) { %>
+                                                <div class="partner-item">
+                                                    <img src="/images/partners/<%= img %>" alt="Partner">
+                                                </div>
+                                                <% }); %>
+                                                    <!-- Duplicate for infinite scroll effect -->
+                                                    <% partnerImages.forEach(function(img) { %>
+                                                        <div class="partner-item">
+                                                            <img src="/images/partners/<%= img %>" alt="Partner">
+                                                        </div>
+                                                        <% }); %>
+                                        </div>
+                                    </div>
+                                </section>
+                                <% } %>
+
+        </main>
+
+        <%- include('partials/footer') %>
+
+            <script src="/public/js/main.js"></script>
+            <script>i18n.init();</script>
+            </body>
+
+            </html>

@@ -1,0 +1,40 @@
+<%- include('partials/head') %>
+    <%- include('partials/header') %>
+
+        <main class="gallery-page">
+            <div class="page-header">
+                <p class="section-subtitle" data-i18n="our_work">Our work</p>
+                <h2 class="section-title" data-i18n="gallery">Gallery</h2>
+            </div>
+
+            <div class="gallery-grid">
+                <% (galleryImages || []).forEach(function(img) { %>
+                    <% const nameWithoutExt=img.replace(/\.[^.]+$/, '' ); const
+                        descriptions=company.companyGalleryDescriptions || {}; const
+                        description=descriptions[nameWithoutExt] || '' ; %>
+                        <div class="gallery-item" data-full-src="/images/gallery/<%= img %>"
+                            data-description="<%= description %>">
+                            <img src="/images/gallery/<%= img %>" alt="<%= description || 'Gallery image' %>"
+                                loading="lazy">
+                        </div>
+                        <% }); %>
+            </div>
+        </main>
+
+        <!-- Lightbox -->
+        <div class="lightbox-overlay">
+            <button class="lightbox-close" aria-label="Close">&times;</button>
+            <button class="lightbox-nav lightbox-prev" aria-label="Previous"><i
+                    class="fas fa-chevron-left"></i></button>
+            <button class="lightbox-nav lightbox-next" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+            <img src="" alt="Gallery image">
+            <p class="lightbox-description"></p>
+        </div>
+
+        <%- include('partials/footer') %>
+
+            <script src="/public/js/main.js"></script>
+            <script>i18n.init();</script>
+            </body>
+
+            </html>

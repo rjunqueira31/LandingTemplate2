@@ -1,0 +1,89 @@
+{
+  "companyName": "RR Barber Studio",
+  "companyEmail": "contact@rrbarberstudio.com",
+  "companyPhoneNumbers": ["+351 912 345 678"],
+  "companySchedule": "Mon-Fri: 9AM-8PM | Sat: 9AM-6PM | Sun: Closed",
+  "companyAddress": "Rua da Liberdade 123, Lisboa, Portugal",
+  "companyDisclaimer": "© 2026 RR Barber Studio. All rights reserved.",
+  "companySlogan": "Cortes, barba e presença pensados para uma rotina moderna.",
+  "companySloganSubtitle": "BARBEARIA CONTEMPORANEA",
+  "companyPrimaryColor": "#1a1a1a",
+  "companySecondaryColor": "#c4956a",
+  "defaultVacationDays": 22,
+
+  "socialMedia": {
+    "whatsapp": "+351912345678",
+    "instagram": "https://instagram.com/rrbarberstudio",
+    "facebook": "",
+    "x": "",
+    "linkedin": "",
+    "youtube": "",
+    "tiktok": "",
+    "github": "",
+    "pinterest": ""
+  },
+
+  "pages": {
+    "aboutUs": true,
+    "services": true,
+    "partners": true,
+    "contacts": true,
+    "gallery": true,
+    "bookings": true,
+    "vacations": true
+  },
+
+  "companyAboutUsTexts": [
+    "Com mais de 10 anos de experiência, o RR Barber Studio nasceu da paixão por transformar o simples ato de cortar cabelo numa experiência única e personalizada.",
+    "O nosso espaço foi desenhado para proporcionar conforto e sofisticação, onde cada detalhe foi pensado para que se sinta em casa.",
+    "Utilizamos apenas produtos premium e técnicas modernas para garantir que cada cliente sai com o visual perfeito para o seu estilo de vida."
+  ],
+
+  "companyServiceList": [
+    {
+      "title": "Corte de Cabelo",
+      "description": "Corte personalizado adaptado ao seu estilo e tipo de cabelo.",
+      "price": "€20"
+    },
+    {
+      "title": "Barba",
+      "description": "Aparar e modelar a barba com navalha e produtos premium.",
+      "price": "€15"
+    },
+    {
+      "title": "Corte + Barba",
+      "description": "Combinação completa de corte de cabelo e tratamento de barba.",
+      "price": "€30"
+    },
+    {
+      "title": "Tratamento Capilar",
+      "description": "Tratamento hidratante e nutritivo para cabelo saudável.",
+      "price": "€25"
+    }
+  ],
+
+  "companyGalleryDescriptions": {
+    "gallery3": "Our signature haircut style",
+    "gallery2": "Classic beard trim"
+  },
+
+  "bookingConfig": {
+    "slotDurationMinutes": 30,
+    "maxAdvanceDays": 30,
+    "schedule": {
+      "monday":    { "open": "09:00", "close": "20:00" },
+      "tuesday":   { "open": "09:00", "close": "20:00" },
+      "wednesday": { "open": "09:00", "close": "20:00" },
+      "thursday":  { "open": "09:00", "close": "20:00" },
+      "friday":    { "open": "09:00", "close": "20:00" },
+      "saturday":  { "open": "09:00", "close": "18:00" },
+      "sunday":    null
+    },
+    "bookableServices": [
+      { "id": "corte", "title": "Corte de Cabelo", "durationMinutes": 30 },
+      { "id": "barba", "title": "Barba", "durationMinutes": 45 },
+      { "id": "corte-barba", "title": "Corte + Barba", "durationMinutes": 60 },
+      { "id": "tratamento", "title": "Tratamento Capilar", "durationMinutes": 90 }
+    ]
+  }
+}
