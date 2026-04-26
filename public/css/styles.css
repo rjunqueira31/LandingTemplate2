@@ -72,6 +72,12 @@ nav .lang-toggle {
   margin-top: 10px;
 }
 
+/* Hide logo when mobile menu is open */
+body.mobile-menu-open .nav-logo {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .lang-btn {
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.2);

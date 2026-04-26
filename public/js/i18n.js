@@ -174,7 +174,8 @@ var translations = {
     'cnt_delete_image': 'Delete this image?',
     'cnt_saved': 'Saved!',
     'cnt_deleted': 'Deleted',
-    'cnt_uploaded': 'Uploaded!'
+    'cnt_uploaded': 'Uploaded!',
+    'cnt_fill_required': 'Please fill in all required fields.'
   },
   pt: {
     // --- Public site ---
@@ -346,7 +347,8 @@ var translations = {
     'cnt_delete_image': 'Eliminar esta imagem?',
     'cnt_saved': 'Guardado!',
     'cnt_deleted': 'Eliminado',
-    'cnt_uploaded': 'Carregado!'
+    'cnt_uploaded': 'Carregado!',
+    'cnt_fill_required': 'Preencha todos os campos obrigatórios.'
   }
 };
 

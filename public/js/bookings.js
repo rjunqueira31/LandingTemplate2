@@ -299,6 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
 
           // Success
+          state.step = 6;
           document.querySelectorAll('.booking-step').forEach(function(el) {
             el.classList.remove('active');
           });
@@ -345,6 +346,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Re-render on language change
   document.addEventListener('langchange', function() {
+    if (state.step === 6) {
+      // Already confirmed — just update the success message text
+      document.getElementById('successMessage').textContent =
+          state.selectedService.title + i18n.t('on') +
+          formatDateNice(state.selectedDate) + i18n.t('at') +
+          state.selectedTime;
+      return;
+    }
     renderCalendar();
     showStep(state.step);
   });

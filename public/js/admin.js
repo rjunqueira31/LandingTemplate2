@@ -717,6 +717,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('btnSaveCompanyInfo')
         .addEventListener('click', function() {
+          var name = document.getElementById('cntCompanyName').value.trim();
+          if (!name) {
+            showMsg('companyInfoMsg', i18n.t('cnt_fill_required'), true);
+            return;
+          }
           var phones = document.getElementById('cntCompanyPhone')
                            .value.split(',')
                            .map(function(p) {
@@ -792,10 +797,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnSaveAboutTexts')
         .addEventListener('click', function() {
           var texts = [];
+          var hasEmpty = false;
           document.querySelectorAll('#aboutTextsContainer textarea')
               .forEach(function(ta) {
-                if (ta.value.trim()) texts.push(ta.value.trim());
+                if (ta.value.trim()) {
+                  texts.push(ta.value.trim());
+                } else {
+                  hasEmpty = true;
+                }
               });
+          if (hasEmpty) {
+            showMsg('aboutTextsMsg', i18n.t('cnt_fill_required'), true);
+            return;
+          }
           fetch('/admin/api/content/about', {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
@@ -863,17 +877,26 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnSaveServices')
         .addEventListener('click', function() {
           var services = [];
+          var hasEmpty = false;
           document.querySelectorAll('#servicesContainer .service-edit-item')
               .forEach(function(row) {
                 var inputs = row.querySelectorAll('input');
-                if (inputs[0].value.trim()) {
+                var title = inputs[0].value.trim();
+                var price = inputs[2].value.trim();
+                if (!title || !price) {
+                  hasEmpty = true;
+                } else {
                   services.push({
-                    title: inputs[0].value.trim(),
+                    title: title,
                     description: inputs[1].value.trim(),
-                    price: inputs[2].value.trim()
+                    price: price
                   });
                 }
               });
+          if (hasEmpty) {
+            showMsg('servicesMsg', i18n.t('cnt_fill_required'), true);
+            return;
+          }
           fetch('/admin/api/content/services', {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},

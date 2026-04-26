@@ -141,6 +141,7 @@ function initMobileMenu() {
   function closeMenu() {
     mobileMenu.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
+    document.body.classList.remove('mobile-menu-open');
     document.body.style.overflow = '';
     icon.classList.remove('fa-times');
     icon.classList.add('fa-bars');
@@ -149,6 +150,7 @@ function initMobileMenu() {
   hamburger.addEventListener('click', function() {
     var isActive = mobileMenu.classList.toggle('active');
     if (overlay) overlay.classList.toggle('active');
+    document.body.classList.toggle('mobile-menu-open', isActive);
     document.body.style.overflow = isActive ? 'hidden' : '';
 
     if (isActive) {
