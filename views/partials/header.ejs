@@ -4,9 +4,10 @@
     i18nKey: 'nav_services' }); if (company.pages.partners) navItems.push({ label: 'Partners' , type: 'section' ,
     target: 'partners' , i18nKey: 'nav_partners' }); if (company.pages.gallery) navItems.push({ label: 'Gallery' ,
     type: 'page' , target: '/gallery' , i18nKey: 'nav_gallery' }); if (company.pages.bookings) navItems.push({
-    label: 'Bookings' , type: 'page' , target: '/bookings' , i18nKey: 'nav_bookings' }); const
+    label: 'Bookings' , type: 'page' , target: '/bookings' , i18nKey: 'nav_bookings' }); if (company.pages.store) navItems.push({
+    label: 'Store' , type: 'page' , target: '/store' , i18nKey: 'nav_store' }); const
     mid=Math.ceil(navItems.length / 2); const leftItems=navItems.slice(0, mid); const rightItems=navItems.slice(mid);
-    const isHome=currentPath==='/' ; %>
+    const isHome=currentPath==='/' ; const isStore=currentPath.startsWith('/store'); %>
 
     <header class="<%= currentPath !== '/' ? 'scrolled' : '' %>">
         <nav>
@@ -53,6 +54,7 @@
                             </a>
                             <% } %>
                                 <% }); %>
+
             </div>
 
             <button class="hamburger" aria-label="Toggle menu">
@@ -63,12 +65,50 @@
                 <button class="lang-btn" data-lang="en">EN</button>
                 <button class="lang-btn" data-lang="pt">PT</button>
             </div>
+
+            <% if (company.pages.store) { %>
+                <div class="store-nav-icons">
+                    <a href="/store/cart" class="nav-icon cart-icon" aria-label="Cart">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-badge" id="cartBadge" style="display:none;">0</span>
+                    </a>
+                    <div class="user-icon-wrapper">
+                        <button class="nav-icon user-icon" id="userMenuBtn" aria-label="Account">
+                            <i class="fas fa-user"></i>
+                        </button>
+                        <!-- User Dropdown Menu -->
+                        <div class="user-dropdown" id="userDropdown" style="display:none;">
+                            <div class="user-dropdown-logged-out" id="userLoggedOut">
+                                <button class="dropdown-item" id="btnShowLogin" data-i18n="store_login">Log In</button>
+                                <button class="dropdown-item" id="btnShowRegister" data-i18n="store_register">Register</button>
+                            </div>
+                            <div class="user-dropdown-logged-in" id="userLoggedIn" style="display:none;">
+                                <p class="dropdown-user-name" id="dropdownUserName"></p>
+                                <a href="/store/orders" class="dropdown-item" data-i18n="store_my_orders">My Orders</a>
+                                <button class="dropdown-item" id="btnShowProfile" data-i18n="store_edit_profile">Edit Profile</button>
+                                <button class="dropdown-item" id="btnLogout" data-i18n="store_logout">Log Out</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
         </nav>
     </header>
 
     <!-- Mobile Menu -->
     <div class="mobile-menu-overlay"></div>
     <div class="mobile-menu">
+        <% if (company.pages.store) { %>
+            <div class="mobile-store-icons">
+                <a href="/store/cart" class="mobile-store-icon" aria-label="Cart">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge-mobile" id="cartBadgeMobile" style="display:none;">0</span>
+                </a>
+                <button class="mobile-store-icon" id="userMenuBtnMobile" aria-label="Account">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        <% } %>
         <% navItems.forEach(function(item) { %>
             <% if (item.type==='section' ) { %>
                 <a href="<%= isHome ? '#' + item.target : '/#' + item.target %>" data-section="<%= item.target %>"
@@ -86,3 +126,71 @@
                                 <button class="lang-btn" data-lang="pt">PT</button>
                             </div>
     </div>
+
+    <% if (company.pages.store) { %>
+    <!-- Auth Modal -->
+    <div class="auth-modal-overlay" id="authModal" style="display:none;">
+        <div class="auth-modal">
+            <button class="auth-modal-close" id="authModalClose">&times;</button>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h3 data-i18n="store_login">Log In</h3>
+                <div class="form-group">
+                    <label data-i18n="store_email">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="store_password">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <div class="auth-error" id="loginError" style="display:none;"></div>
+                <button class="auth-btn" id="btnLogin" data-i18n="store_login">Log In</button>
+                <p class="auth-switch"><span data-i18n="store_no_account">Don't have an account?</span> <a href="#" id="switchToRegister" data-i18n="store_register">Register</a></p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form" style="display:none;">
+                <h3 data-i18n="store_register">Register</h3>
+                <div class="form-group">
+                    <label data-i18n="store_full_name">Full Name</label>
+                    <input type="text" id="registerName" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="store_email">Email</label>
+                    <input type="email" id="registerEmail" required maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="store_password">Password</label>
+                    <input type="password" id="registerPassword" required minlength="6">
+                </div>
+                <div class="auth-error" id="registerError" style="display:none;"></div>
+                <button class="auth-btn" id="btnRegister" data-i18n="store_register">Register</button>
+                <p class="auth-switch"><span data-i18n="store_have_account">Already have an account?</span> <a href="#" id="switchToLogin" data-i18n="store_login">Log In</a></p>
+            </div>
+
+            <!-- Profile Form -->
+            <div id="profileForm" class="auth-form" style="display:none;">
+                <h3 data-i18n="store_edit_profile">Edit Profile</h3>
+                <div class="form-group">
+                    <label data-i18n="store_full_name">Full Name</label>
+                    <input type="text" id="profileName" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="store_email">Email</label>
+                    <input type="email" id="profileEmail" maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="store_current_password">Current Password</label>
+                    <input type="password" id="profileCurrentPassword">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="store_new_password">New Password</label>
+                    <input type="password" id="profileNewPassword" minlength="6" placeholder="Leave blank to keep current">
+                </div>
+                <div class="auth-error" id="profileError" style="display:none;"></div>
+                <button class="auth-btn" id="btnSaveProfile" data-i18n="store_save">Save</button>
+            </div>
+        </div>
+    </div>
+    <% } %>

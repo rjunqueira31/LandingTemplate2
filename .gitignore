@@ -5,3 +5,6 @@ Thumbs.db
 generated/
 
 /generated/prisma
+
+# Company-specific data (externalized per deployment)
+company/

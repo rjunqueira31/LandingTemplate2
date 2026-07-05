@@ -1,0 +1,82 @@
+<%- include('partials/head') %>
+    <% if (company.pages.store) { %>
+        <link rel="stylesheet" href="/public/css/store.css">
+    <% } %>
+    <%- include('partials/header') %>
+
+    <main class="store-page product-detail-page">
+        <div class="product-detail" id="productDetail">
+            <div class="product-gallery">
+                <div class="product-main-image">
+                    <% const images = JSON.parse(product.images || '[]'); %>
+                    <% if (images.length > 0) { %>
+                        <img src="/images/products/<%= images[0] %>" alt="<%= product.title %>" id="productMainImg">
+                    <% } else { %>
+                        <div class="product-no-image"><i class="fas fa-image"></i></div>
+                    <% } %>
+                </div>
+                <% if (images.length > 1) { %>
+                    <div class="product-thumbnails">
+                        <% images.forEach(function(img, idx) { %>
+                            <img src="/images/products/<%= img %>" alt="<%= product.title %>"
+                                class="product-thumb <%= idx === 0 ? 'active' : '' %>"
+                                onclick="document.getElementById('productMainImg').src=this.src; document.querySelectorAll('.product-thumb').forEach(t=>t.classList.remove('active')); this.classList.add('active');">
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="product-info">
+                <h1 class="product-detail-title"><%= product.title %></h1>
+                <p class="product-detail-price" id="productPrice">€<%= product.price.toFixed(2) %></p>
+                <p class="product-detail-description"><%= product.description %></p>
+
+                <% if (product.options && product.options.length > 0) { %>
+                    <div class="product-options">
+                        <label data-i18n="store_select_option">Select option:</label>
+                        <div class="option-buttons" id="optionButtons">
+                            <% product.options.forEach(function(opt) { %>
+                                <% const optAvail = opt.available !== null ? opt.available : product.available; %>
+                                <button class="option-btn <%= optAvail ? '' : 'unavailable' %>"
+                                    data-option-id="<%= opt.id %>"
+                                    data-price="<%= opt.price !== null ? opt.price : product.price %>"
+                                    data-available="<%= optAvail %>"
+                                    <%= !optAvail ? 'disabled' : '' %>>
+                                    <%= opt.name %>
+                                </button>
+                            <% }); %>
+                        </div>
+                    </div>
+                <% } %>
+
+                <% const isAvail = product.available; %>
+                <div class="product-actions" id="productActions">
+                    <div class="quantity-control">
+                        <button class="qty-btn" onclick="changeQty(-1)">-</button>
+                        <input type="number" id="productQty" value="1" min="1" max="99" readonly>
+                        <button class="qty-btn" onclick="changeQty(1)">+</button>
+                    </div>
+                    <button class="btn-add-cart" id="btnAddCart" data-product-id="<%= product.id %>"
+                        data-i18n="store_add_to_cart" <%= !isAvail ? 'disabled' : '' %>>Add to Cart</button>
+                    <button class="btn-buy-now" id="btnBuyNow" data-product-id="<%= product.id %>"
+                        data-i18n="store_buy_now" <%= !isAvail ? 'disabled' : '' %>>Buy Now</button>
+                </div>
+
+                <% if (!isAvail) { %>
+                    <p class="product-unavailable" data-i18n="store_unavailable">Currently unavailable</p>
+                <% } %>
+            </div>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script src="/public/js/main.js"></script>
+    <script src="/public/js/store.js"></script>
+    <script>
+        i18n.init();
+        // Product data for JS
+        window.__product = <%- JSON.stringify({id: product.id, title: product.title, price: product.price, available: product.available, images: JSON.parse(product.images || '[]'), options: product.options}) %>;
+    </script>
+    </body>
+</html>

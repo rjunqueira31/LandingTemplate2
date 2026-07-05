@@ -1,0 +1,89 @@
+<%- include('partials/head') %>
+    <% if (company.pages.store) { %>
+        <link rel="stylesheet" href="/public/css/store.css">
+    <% } %>
+    <%- include('partials/header') %>
+
+    <main class="store-page checkout-page">
+        <div class="page-header">
+            <p class="section-subtitle" data-i18n="store_checkout_subtitle">Complete Your Order</p>
+            <h2 class="section-title" data-i18n="store_checkout">Checkout</h2>
+        </div>
+
+        <div class="checkout-container" id="checkoutContainer">
+            <div class="checkout-form">
+                <!-- Order Summary -->
+                <div class="checkout-section">
+                    <h3 data-i18n="store_order_summary">Order Summary</h3>
+                    <div id="checkoutItems" class="checkout-items"></div>
+                    <div class="checkout-total">
+                        <strong data-i18n="store_total">Total:</strong>
+                        <strong id="checkoutTotal">€0.00</strong>
+                    </div>
+                </div>
+
+                <!-- Shipping -->
+                <div class="checkout-section">
+                    <h3 data-i18n="store_shipping_info">Shipping Information</h3>
+                    <div class="form-group">
+                        <label data-i18n="store_full_name">Full Name *</label>
+                        <input type="text" id="shipName" required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="store_email">Email *</label>
+                        <input type="email" id="shipEmail" required maxlength="200">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="store_phone">Phone</label>
+                        <input type="tel" id="shipPhone" maxlength="30" placeholder="+351 912 345 678">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="store_address">Address *</label>
+                        <textarea id="shipAddress" required maxlength="500" rows="3" placeholder="Rua, Número, Andar&#10;Código Postal, Cidade&#10;País"></textarea>
+                    </div>
+                </div>
+
+                <!-- Billing -->
+                <div class="checkout-section">
+                    <h3 data-i18n="store_billing_info">Billing Information</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="sameAsShipping" checked>
+                        <span data-i18n="store_same_as_shipping">Same as shipping address</span>
+                    </label>
+                    <div class="form-group" id="billingAddressGroup" style="display:none;">
+                        <label data-i18n="store_billing_address">Billing Address *</label>
+                        <textarea id="billAddress" maxlength="500" rows="3" placeholder="Rua, Número, Andar&#10;Código Postal, Cidade&#10;País"></textarea>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="checkout-section">
+                    <h3 data-i18n="store_payment_method">Payment Method</h3>
+                    <div class="payment-methods">
+                        <label class="payment-option selected">
+                            <input type="radio" name="paymentMethod" value="card" checked>
+                            <i class="fas fa-credit-card"></i>
+                            <span data-i18n="store_credit_card">Credit Card</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="paymentMethod" value="mbway">
+                            <i class="fas fa-mobile-alt"></i>
+                            <span>MB WAY</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="checkout-error" id="checkoutError" style="display:none;"></div>
+
+                <button class="btn-pay" id="btnPay" data-i18n="store_complete_purchase">Complete Purchase</button>
+            </div>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script src="/public/js/main.js"></script>
+    <script src="/public/js/store.js"></script>
+    <script>i18n.init();</script>
+    </body>
+</html>

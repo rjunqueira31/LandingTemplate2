@@ -58,8 +58,10 @@ function initNavOverflow() {
   function checkOverflow() {
     // Temporarily remove collapsed to measure real width
     header.classList.remove('nav-collapsed');
-    // Compare nav scroll width vs its visible width
+    // Temporarily add overflow hidden to get accurate scrollWidth
+    nav.style.overflow = 'hidden';
     var isOverflowing = nav.scrollWidth > nav.clientWidth;
+    nav.style.overflow = '';
     if (isOverflowing) {
       header.classList.add('nav-collapsed');
     }

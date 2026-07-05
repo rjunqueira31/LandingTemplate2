@@ -49,6 +49,14 @@
                                         <a href="#" class="nav-item" data-page="users">
                                             <i class="fas fa-users"></i> <span data-i18n="users_page">Users</span>
                                         </a>
+                                        <% if (company.pages.store) { %>
+                                            <a href="#" class="nav-item" data-page="store-products">
+                                                <i class="fas fa-box"></i> <span data-i18n="store_products_page">Products</span>
+                                            </a>
+                                            <a href="#" class="nav-item" data-page="store-orders">
+                                                <i class="fas fa-shopping-bag"></i> <span data-i18n="store_orders_page">Orders</span>
+                                            </a>
+                                        <% } %>
                                         <% } %>
                                             <a href="#" class="nav-item<%= firstPage==='settings' ? ' active' : '' %>"
                                                 data-page="settings">
@@ -387,6 +395,68 @@
                                             </div>
                                         </div>
                                         <% } %>
+
+                                        <% if (company.pages.store && role==='admin') { %>
+                                        <!-- Store Products page -->
+                                        <div class="admin-page" id="page-store-products">
+                                            <div class="page-top">
+                                                <h1 data-i18n="store_products_page">Products</h1>
+                                                <button class="btn-primary" id="btnAddProduct"><i class="fas fa-plus"></i>
+                                                    <span data-i18n="store_add_product">Add Product</span></button>
+                                            </div>
+                                            <div class="products-table-wrap">
+                                                <table class="users-table products-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>ID</th>
+                                                            <th data-i18n="store_product_image">Image</th>
+                                                            <th data-i18n="store_product_title">Title</th>
+                                                            <th data-i18n="store_product_price">Price</th>
+                                                            <th data-i18n="store_product_available">Available</th>
+                                                            <th data-i18n="store_product_options">Options</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="productsTableBody"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <!-- Store Orders page -->
+                                        <div class="admin-page" id="page-store-orders">
+                                            <div class="page-top">
+                                                <h1 data-i18n="store_orders_page">Orders</h1>
+                                                <div class="orders-filters">
+                                                    <select id="orderStatusFilter" class="filter-select">
+                                                        <option value="all" data-i18n="store_all">All</option>
+                                                        <option value="received" data-i18n="store_status_received">Received</option>
+                                                        <option value="processing" data-i18n="store_status_processing">Processing</option>
+                                                        <option value="shipped" data-i18n="store_status_shipped">Shipped</option>
+                                                        <option value="finished" data-i18n="store_status_finished">Finished</option>
+                                                    </select>
+                                                    <input type="text" id="orderSearchInput" class="filter-input" placeholder="Search by name, email, or ID..." data-i18n-placeholder="store_search_orders">
+                                                    <button class="btn-primary" id="btnAddOrder"><i class="fas fa-plus"></i>
+                                                        <span data-i18n="store_add_order">Add Order</span></button>
+                                                </div>
+                                            </div>
+                                            <div class="orders-table-wrap">
+                                                <table class="users-table orders-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>ID</th>
+                                                            <th data-i18n="store_customer">Customer</th>
+                                                            <th data-i18n="store_email">Email</th>
+                                                            <th data-i18n="store_total">Total</th>
+                                                            <th data-i18n="store_status">Status</th>
+                                                            <th data-i18n="store_date">Date</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="ordersTableBody"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <% } %>
         </main>
     </div>
 
@@ -487,8 +557,131 @@
                 </div>
                 <% } %>
 
+                <% if (company.pages.store && role==='admin') { %>
+                <!-- Product Modal -->
+                <div class="modal-overlay" id="productModal">
+                    <div class="modal modal-wide">
+                        <div class="modal-header">
+                            <h3 id="productModalTitle">Add Product</h3>
+                            <button class="modal-close" id="productModalClose">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="productModalId">
+                            <div class="form-group">
+                                <label data-i18n="store_product_title">Title</label>
+                                <input type="text" id="productModalTitle2" maxlength="200">
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_product_description">Description</label>
+                                <textarea id="productModalDesc" rows="3" maxlength="2000"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label data-i18n="store_product_price">Price (€)</label>
+                                    <input type="number" id="productModalPrice" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="store_product_available">Available</label>
+                                    <select id="productModalAvailable">
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_product_images">Images (up to 5)</label>
+                                <div id="productModalExistingImages" class="existing-images"></div>
+                                <input type="file" id="productModalImages" multiple accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_product_options">Options</label>
+                                <div id="productModalOptions" class="options-editor"></div>
+                                <button type="button" class="btn-small" id="btnAddOption"><i class="fas fa-plus"></i> Add Option</button>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn-primary" id="btnSaveProduct">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Modal -->
+                <div class="modal-overlay" id="orderModal">
+                    <div class="modal modal-wide">
+                        <div class="modal-header">
+                            <h3 id="orderModalTitle">Order Details</h3>
+                            <button class="modal-close" id="orderModalClose">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="orderModalId">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label data-i18n="store_customer">Customer Name</label>
+                                    <input type="text" id="orderModalName" maxlength="100">
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="store_email">Email</label>
+                                    <input type="email" id="orderModalEmail" maxlength="200">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label data-i18n="store_phone">Phone</label>
+                                    <input type="tel" id="orderModalPhone" maxlength="30">
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="store_status">Status</label>
+                                    <select id="orderModalStatus">
+                                        <option value="received">Received</option>
+                                        <option value="processing">Processing</option>
+                                        <option value="shipped">Shipped</option>
+                                        <option value="finished">Finished</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_shipping_address">Shipping Address</label>
+                                <textarea id="orderModalShipAddress" rows="2" maxlength="500"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_billing_address">Billing Address</label>
+                                <textarea id="orderModalBillAddress" rows="2" maxlength="500"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label data-i18n="store_shipment_id">Shipment ID</label>
+                                    <input type="text" id="orderModalShipmentId" maxlength="200">
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="store_total">Total</label>
+                                    <input type="text" id="orderModalTotal" readonly>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_notes">Notes</label>
+                                <textarea id="orderModalNotes" rows="2" maxlength="1000"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="store_order_items">Items</label>
+                                <div id="orderModalItems" class="order-items-list"></div>
+                            </div>
+                            <div id="orderModalInvoice" style="display:none;">
+                                <a href="" target="_blank" id="orderModalInvoiceLink" class="btn-small"><i class="fas fa-file-invoice"></i> View Invoice</a>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn-primary" id="btnSaveOrder">Save</button>
+                            <button class="btn-danger" id="btnDeleteOrder"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
                     <script>var USER_ROLE = '<%= role %>'; var USER_ID = <%= userId %>; var PAGES = <%- JSON.stringify(company.pages) %>;</script>
                     <script src="/public/js/admin.js"></script>
+                    <% if (company.pages.store && role==='admin') { %>
+                        <script src="/public/js/admin-store.js"></script>
+                    <% } %>
                     <script>i18n.init();</script>
 </body>
 

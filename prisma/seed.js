@@ -3,7 +3,11 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
+require('dotenv').config({path: path.join(__dirname, '..', '.env')});
+
 const prisma = new PrismaClient();
+
+const COMPANY_DIR = path.resolve(process.env.COMPANY_DATA_PATH || path.join(__dirname, '..', 'company'));
 
 async function main() {
   const existing = await prisma.user.findUnique({where: {username: 'admin'}});
@@ -27,7 +31,7 @@ async function main() {
   // Migrate bookings from JSON file if DB is empty
   const bookingCount = await prisma.booking.count();
   if (bookingCount === 0) {
-    const bookingsFile = path.join(__dirname, '..', 'company', 'bookings.json');
+    const bookingsFile = path.join(COMPANY_DIR, 'bookings.json');
     try {
       const bookings = JSON.parse(fs.readFileSync(bookingsFile, 'utf8'));
       if (bookings.length > 0) {

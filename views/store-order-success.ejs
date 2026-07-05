@@ -1,0 +1,26 @@
+<%- include('partials/head') %>
+    <% if (company.pages.store) { %>
+        <link rel="stylesheet" href="/public/css/store.css">
+    <% } %>
+    <%- include('partials/header') %>
+
+    <main class="store-page success-page">
+        <div class="success-container" id="successContainer">
+            <i class="fas fa-check-circle success-icon"></i>
+            <h2 data-i18n="store_order_placed">Order Placed Successfully!</h2>
+            <p data-i18n="store_order_confirmation">Thank you for your purchase. You will receive a confirmation email shortly.</p>
+            <div id="orderDetails" class="order-details"></div>
+            <div class="success-actions">
+                <a href="/store" class="btn-continue" data-i18n="store_continue_shopping">Continue Shopping</a>
+                <a href="" class="btn-invoice" id="btnInvoice" style="display:none;" target="_blank" data-i18n="store_view_invoice">View Invoice</a>
+            </div>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script src="/public/js/main.js"></script>
+    <script src="/public/js/store.js"></script>
+    <script>i18n.init();</script>
+    </body>
+</html>

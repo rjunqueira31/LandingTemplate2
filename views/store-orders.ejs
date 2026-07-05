@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+    <% if (company.pages.store) { %>
+        <link rel="stylesheet" href="/public/css/store.css">
+    <% } %>
+    <%- include('partials/header') %>
+
+    <main class="store-page orders-page">
+        <div class="page-header">
+            <p class="section-subtitle" data-i18n="store_order_history_sub">Track your purchases</p>
+            <h2 class="section-title" data-i18n="store_my_orders">My Orders</h2>
+        </div>
+
+        <div id="ordersLogin" class="orders-login" style="display:none;">
+            <p data-i18n="store_login_to_view">Please log in to view your orders.</p>
+        </div>
+
+        <div id="ordersList" class="orders-list"></div>
+
+        <div id="ordersEmpty" class="orders-empty" style="display:none;">
+            <i class="fas fa-receipt"></i>
+            <p data-i18n="store_no_orders">You haven't placed any orders yet.</p>
+            <a href="/store" class="btn-continue" data-i18n="store_continue_shopping">Continue Shopping</a>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script src="/public/js/main.js"></script>
+    <script src="/public/js/store.js"></script>
+    <script>i18n.init();</script>
+    </body>
+</html>

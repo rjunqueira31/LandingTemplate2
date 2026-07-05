@@ -6,6 +6,62 @@ const bcrypt = require('bcryptjs');
 const session = require('express-session');
 const multer = require('multer');
 const prisma = require('./lib/db');
+const Stripe = require('stripe');
+
+// Company data directory — externalized via env var for multi-tenant deploys
+const COMPANY_DIR = path.resolve(
+    process.env.COMPANY_DATA_PATH || path.join(__dirname, 'company'));
+
+// Recursively copy a folder (used to seed an empty company directory).
+function copyRecursive(src, dest) {
+  const stat = fs.statSync(src);
+  if (stat.isDirectory()) {
+    fs.mkdirSync(dest, {recursive: true});
+    for (const entry of fs.readdirSync(src)) {
+      copyRecursive(path.join(src, entry), path.join(dest, entry));
+    }
+  } else {
+    fs.copyFileSync(src, dest);
+  }
+}
+
+// Ensure the company data directory is usable. On first boot against an empty
+// volume, seed it from the bundled company-template/ so the app can start and
+// the admin can configure everything through the UI. Fail fast otherwise.
+(function ensureCompanyDir() {
+  const dataFile = path.join(COMPANY_DIR, 'data.json');
+  const templateDir = path.join(__dirname, 'company-template');
+
+  if (!fs.existsSync(dataFile)) {
+    if (fs.existsSync(path.join(templateDir, 'data.json'))) {
+      console.log(`No data.json found in ${
+          COMPANY_DIR} — seeding from company-template/`);
+      copyRecursive(templateDir, COMPANY_DIR);
+    } else {
+      console.error(`\n[FATAL] Missing data.json in ${
+          COMPANY_DIR} and no company-template/ to seed from.\n`);
+      process.exit(1);
+    }
+  }
+
+  try {
+    JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+  } catch (err) {
+    console.error(`\n[FATAL] Invalid JSON in ${dataFile}: ${err.message}\n`);
+    process.exit(1);
+  }
+  console.log(`Company data loaded from: ${COMPANY_DIR}`);
+})();
+
+let stripe = null;
+function getStripe() {
+  if (!stripe) {
+    if (!process.env.STRIPE_SECRET_KEY)
+      throw new Error('STRIPE_SECRET_KEY is not configured');
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripe;
+}
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -14,7 +70,47 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use('/images', express.static(path.join(__dirname, 'company', 'images')));
+app.use('/images', express.static(path.join(COMPANY_DIR, 'images')));
+
+// Stripe webhook needs raw body — must be before express.json()
+app.post(
+    '/api/stripe/webhook', express.raw({type: 'application/json'}),
+    async (req, res) => {
+      const sig = req.headers['stripe-signature'];
+      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+      let event;
+      try {
+        event =
+            getStripe().webhooks.constructEvent(req.body, sig, endpointSecret);
+      } catch (err) {
+        console.error('Webhook signature verification failed:', err.message);
+        return res.status(400).send('Webhook Error');
+      }
+
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        try {
+          const order = await prisma.order.findFirst(
+              {where: {stripeSessionId: session.id}});
+          if (order && order.status === 'received') {
+            const updateData = {status: 'received'};
+            // Retrieve invoice if available
+            if (session.invoice) {
+              const invoice =
+                  await getStripe().invoices.retrieve(session.invoice);
+              updateData.stripeInvoiceId = invoice.id;
+              updateData.stripeInvoiceUrl = invoice.hosted_invoice_url || '';
+            }
+            await prisma.order.update(
+                {where: {id: order.id}, data: updateData});
+          }
+        } catch (err) {
+          console.error('Webhook order update error:', err.message);
+        }
+      }
+
+      res.json({received: true});
+    });
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -29,17 +125,17 @@ app.use(session({
 }));
 
 function loadCompanyData() {
-  const filePath = path.join(__dirname, 'company', 'data.json');
+  const filePath = path.join(COMPANY_DIR, 'data.json');
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
 function saveCompanyData(data) {
-  const filePath = path.join(__dirname, 'company', 'data.json');
+  const filePath = path.join(COMPANY_DIR, 'data.json');
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
 function getImages(subdir) {
-  const dirPath = path.join(__dirname, 'company', 'images', subdir);
+  const dirPath = path.join(COMPANY_DIR, 'images', subdir);
   if (!fs.existsSync(dirPath)) return [];
   return fs.readdirSync(dirPath)
       .filter(f => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f))
@@ -57,6 +153,7 @@ app.use((req, res, next) => {
   res.locals.aboutImages = getImages('about');
   res.locals.galleryImages = getImages('gallery');
   res.locals.partnerImages = getImages('partners');
+  res.locals.customer = req.session.customer || null;
   next();
 });
 
@@ -805,6 +902,699 @@ app.delete(
       }
     });
 
+/* ============================== */
+/* STORE — CUSTOMER AUTH          */
+/* ============================== */
+
+function requireCustomer(req, res, next) {
+  if (req.session && req.session.customer) return next();
+  res.status(401).json({error: 'Login required'});
+}
+
+// Register
+app.post('/api/auth/register', requirePage('store'), async (req, res) => {
+  const {name, email, password} = req.body;
+  const cleanName = String(name || '').trim().slice(0, 100);
+  const cleanEmail = String(email || '').trim().toLowerCase().slice(0, 200);
+  const cleanPass = String(password || '');
+
+  if (!cleanName || cleanName.length < 2)
+    return res.status(400).json({error: 'Name must be at least 2 characters'});
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
+    return res.status(400).json({error: 'Invalid email'});
+  if (cleanPass.length < 6)
+    return res.status(400).json(
+        {error: 'Password must be at least 6 characters'});
+
+  try {
+    const existing =
+        await prisma.customer.findUnique({where: {email: cleanEmail}});
+    if (existing)
+      return res.status(409).json({error: 'Email already registered'});
+
+    const hash = await bcrypt.hash(cleanPass, 10);
+    const customer = await prisma.customer.create({
+      data: {email: cleanEmail, name: cleanName, passwordHash: hash},
+      select: {id: true, email: true, name: true}
+    });
+    req.session.customer = {
+      id: customer.id,
+      email: customer.email,
+      name: customer.name
+    };
+    res.json({success: true, customer: req.session.customer});
+  } catch (err) {
+    console.error('Register error:', err.message);
+    res.status(500).json({error: 'Internal error'});
+  }
+});
+
+// Login
+app.post('/api/auth/login', requirePage('store'), async (req, res) => {
+  const {email, password} = req.body;
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanPass = String(password || '');
+
+  try {
+    const customer =
+        await prisma.customer.findUnique({where: {email: cleanEmail}});
+    if (!customer || !(await bcrypt.compare(cleanPass, customer.passwordHash)))
+      return res.status(401).json({error: 'Invalid email or password'});
+
+    req.session.customer = {
+      id: customer.id,
+      email: customer.email,
+      name: customer.name
+    };
+    res.json({success: true, customer: req.session.customer});
+  } catch (err) {
+    console.error('Login error:', err.message);
+    res.status(500).json({error: 'Internal error'});
+  }
+});
+
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+  delete req.session.customer;
+  res.json({success: true});
+});
+
+// Get current customer
+app.get('/api/auth/me', (req, res) => {
+  if (req.session.customer) return res.json({customer: req.session.customer});
+  res.json({customer: null});
+});
+
+// Update profile
+app.put('/api/auth/profile', requireCustomer, async (req, res) => {
+  const {name, email, currentPassword, newPassword} = req.body;
+  const data = {};
+
+  if (name) data.name = String(name).trim().slice(0, 100);
+  if (email) {
+    const cleanEmail = String(email).trim().toLowerCase().slice(0, 200);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
+      return res.status(400).json({error: 'Invalid email'});
+    const existing =
+        await prisma.customer.findUnique({where: {email: cleanEmail}});
+    if (existing && existing.id !== req.session.customer.id)
+      return res.status(409).json({error: 'Email already in use'});
+    data.email = cleanEmail;
+  }
+
+  if (newPassword) {
+    if (!currentPassword)
+      return res.status(400).json({error: 'Current password required'});
+    const cust = await prisma.customer.findUnique(
+        {where: {id: req.session.customer.id}});
+    if (!cust ||
+        !(await bcrypt.compare(String(currentPassword), cust.passwordHash)))
+      return res.status(403).json({error: 'Current password is incorrect'});
+    if (String(newPassword).length < 6)
+      return res.status(400).json(
+          {error: 'Password must be at least 6 characters'});
+    data.passwordHash = await bcrypt.hash(String(newPassword), 10);
+  }
+
+  try {
+    const updated = await prisma.customer.update({
+      where: {id: req.session.customer.id},
+      data,
+      select: {id: true, email: true, name: true}
+    });
+    req.session
+        .customer = {id: updated.id, email: updated.email, name: updated.name};
+    res.json({success: true, customer: req.session.customer});
+  } catch (err) {
+    console.error('Update profile error:', err.message);
+    res.status(500).json({error: 'Internal error'});
+  }
+});
+
+/* ============================== */
+/* STORE — PUBLIC ROUTES          */
+/* ============================== */
+
+// Store page
+app.get('/store', (req, res) => {
+  if (!res.locals.company.pages.store) return res.redirect('/');
+  res.render('store');
+});
+
+// Product detail page
+app.get('/store/product/:id', async (req, res) => {
+  if (!res.locals.company.pages.store) return res.redirect('/');
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.redirect('/store');
+  const product =
+      await prisma.product.findUnique({where: {id}, include: {options: true}});
+  if (!product) return res.redirect('/store');
+  res.render('store-product', {product});
+});
+
+// Cart page
+app.get('/store/cart', (req, res) => {
+  if (!res.locals.company.pages.store) return res.redirect('/');
+  res.render('store-cart');
+});
+
+// Checkout page
+app.get('/store/checkout', (req, res) => {
+  if (!res.locals.company.pages.store) return res.redirect('/');
+  res.render('store-checkout');
+});
+
+// Order success page
+app.get('/store/order-success', (req, res) => {
+  if (!res.locals.company.pages.store) return res.redirect('/');
+  res.render('store-order-success');
+});
+
+// Customer orders page
+app.get('/store/orders', (req, res) => {
+  if (!res.locals.company.pages.store) return res.redirect('/');
+  res.render('store-orders');
+});
+
+/* ============================== */
+/* STORE — API                    */
+/* ============================== */
+
+// List products
+app.get('/api/store/products', requirePage('store'), async (req, res) => {
+  const products = await prisma.product.findMany(
+      {include: {options: true}, orderBy: {createdAt: 'desc'}});
+  res.json({products});
+});
+
+// Get single product
+app.get('/api/store/products/:id', requirePage('store'), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({error: 'Invalid ID'});
+  const product =
+      await prisma.product.findUnique({where: {id}, include: {options: true}});
+  if (!product) return res.status(404).json({error: 'Not found'});
+  res.json({product});
+});
+
+// Get customer orders
+app.get('/api/store/orders', requireCustomer, async (req, res) => {
+  const orders = await prisma.order.findMany({
+    where: {customerId: req.session.customer.id},
+    include: {items: true},
+    orderBy: {createdAt: 'desc'}
+  });
+  res.json({orders});
+});
+
+// Create checkout session
+app.post('/api/store/checkout', requirePage('store'), async (req, res) => {
+  const {items, shipping, billing, paymentMethod} = req.body;
+
+  if (!Array.isArray(items) || items.length === 0)
+    return res.status(400).json({error: 'Cart is empty'});
+  if (!shipping || !shipping.name || !shipping.email || !shipping.address)
+    return res.status(400).json({error: 'Shipping information required'});
+  if (!billing || !billing.address)
+    return res.status(400).json({error: 'Billing information required'});
+
+  const cleanShipping = {
+    name: String(shipping.name).trim().slice(0, 100),
+    email: String(shipping.email).trim().toLowerCase().slice(0, 200),
+    phone: String(shipping.phone || '').trim().slice(0, 30),
+    address: String(shipping.address).trim().slice(0, 500)
+  };
+  const cleanBilling = {address: String(billing.address).trim().slice(0, 500)};
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanShipping.email))
+    return res.status(400).json({error: 'Invalid email'});
+
+  // Validate items and compute totals
+  const lineItems = [];
+  const orderItems = [];
+  let total = 0;
+
+  for (const item of items) {
+    const product = await prisma.product.findUnique(
+        {where: {id: item.productId}, include: {options: true}});
+    if (!product)
+      return res.status(400).json(
+          {error: 'Product not found: ' + item.productId});
+
+    let price = product.price;
+    let available = product.available;
+    let optionName = '';
+    let optionId = null;
+
+    if (item.optionId) {
+      const option = product.options.find(o => o.id === item.optionId);
+      if (!option) return res.status(400).json({error: 'Option not found'});
+      price = option.price !== null ? option.price : product.price;
+      available =
+          option.available !== null ? option.available : product.available;
+      optionName = option.name;
+      optionId = option.id;
+    }
+
+    if (!available)
+      return res.status(400).json({error: product.title + ' is not available'});
+
+    const qty = Math.max(1, Math.min(99, parseInt(item.quantity, 10) || 1));
+    total += price * qty;
+
+    lineItems.push({
+      price_data: {
+        currency: 'eur',
+        product_data:
+            {name: product.title + (optionName ? ' - ' + optionName : '')},
+        unit_amount: Math.round(price * 100)
+      },
+      quantity: qty
+    });
+
+    orderItems.push({
+      productId: product.id,
+      optionId,
+      productTitle: product.title,
+      optionName,
+      quantity: qty,
+      unitPrice: price
+    });
+  }
+
+  // Create order in DB
+  const order = await prisma.order.create({
+    data: {
+      customerId: req.session.customer ? req.session.customer.id : null,
+      customerName: cleanShipping.name,
+      customerEmail: cleanShipping.email,
+      customerPhone: cleanShipping.phone,
+      shippingAddress: cleanShipping.address,
+      billingAddress: cleanBilling.address,
+      total,
+      paymentMethod: paymentMethod === 'mbway' ? 'mbway' : 'card',
+      items: {create: orderItems}
+    }
+  });
+
+  // Create Stripe Checkout Session
+  try {
+    const paymentMethods =
+        paymentMethod === 'mbway' ? ['multibanco'] : ['card'];
+
+    const sessionConfig = {
+      payment_method_types: paymentMethods,
+      line_items: lineItems,
+      mode: 'payment',
+      customer_email: cleanShipping.email,
+      invoice_creation: {enabled: true},
+      success_url: `${req.protocol}://${
+          req.get(
+              'host')}/store/order-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.protocol}://${req.get('host')}/store/checkout`,
+      metadata: {orderId: String(order.id)}
+    };
+
+    const checkoutSession =
+        await getStripe().checkout.sessions.create(sessionConfig);
+
+    await prisma.order.update(
+        {where: {id: order.id}, data: {stripeSessionId: checkoutSession.id}});
+
+    res.json({url: checkoutSession.url, orderId: order.id});
+  } catch (err) {
+    console.error('Stripe checkout error:', err.message);
+    // Delete the order if Stripe fails
+    await prisma.order.delete({where: {id: order.id}});
+    res.status(500).json({error: 'Payment service error. Please try again.'});
+  }
+});
+
+// Verify order after payment
+app.get('/api/store/order-status', async (req, res) => {
+  const {session_id} = req.query;
+  if (!session_id) return res.status(400).json({error: 'session_id required'});
+
+  try {
+    const order = await prisma.order.findFirst(
+        {where: {stripeSessionId: String(session_id)}, include: {items: true}});
+    if (!order) return res.status(404).json({error: 'Order not found'});
+
+    // Fetch invoice from Stripe if not stored yet
+    if (!order.stripeInvoiceUrl) {
+      const stripeSession =
+          await getStripe().checkout.sessions.retrieve(String(session_id));
+      if (stripeSession.invoice) {
+        const invoice =
+            await getStripe().invoices.retrieve(stripeSession.invoice);
+        await prisma.order.update({
+          where: {id: order.id},
+          data: {
+            stripeInvoiceId: invoice.id,
+            stripeInvoiceUrl: invoice.hosted_invoice_url || ''
+          }
+        });
+        order.stripeInvoiceUrl = invoice.hosted_invoice_url || '';
+        order.stripeInvoiceId = invoice.id;
+      }
+    }
+
+    res.json({order});
+  } catch (err) {
+    console.error('Order status error:', err.message);
+    res.status(500).json({error: 'Internal error'});
+  }
+});
+
+/* ============================== */
+/* ADMIN — STORE MANAGEMENT       */
+/* ============================== */
+
+const PRODUCT_IMAGE_LIMITS = {
+  maxCount: 5,
+  maxSizeMB: 5
+};
+
+function makeProductUpload() {
+  const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+      const dir = path.join(COMPANY_DIR, 'images', 'products');
+      fs.mkdirSync(dir, {recursive: true});
+      cb(null, dir);
+    },
+    filename: function(req, file, cb) {
+      const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const ext = path.extname(safe).toLowerCase();
+      const base = path.basename(safe, ext);
+      cb(null, base + '-' + Date.now() + ext);
+    }
+  });
+  return multer({
+    storage,
+    limits: {fileSize: PRODUCT_IMAGE_LIMITS.maxSizeMB * 1024 * 1024},
+    fileFilter: function(req, file, cb) {
+      if (ALLOWED_MIME.includes(file.mimetype))
+        cb(null, true);
+      else
+        cb(new Error('Invalid file type'));
+    }
+  });
+}
+
+// Admin: list all orders
+app.get('/admin/api/store/orders', requireAuth, async (req, res) => {
+  const {status, search} = req.query;
+  const where = {};
+  if (status && status !== 'all') where.status = status;
+  if (search) {
+    const s = String(search).trim();
+    const idNum = parseInt(s, 10);
+    where.OR = [
+      {customerName: {contains: s, mode: 'insensitive'}},
+      {customerEmail: {contains: s, mode: 'insensitive'}},
+      ...(isNaN(idNum) ? [] : [{id: idNum}])
+    ];
+  }
+  const orders = await prisma.order.findMany(
+      {where, include: {items: true}, orderBy: {createdAt: 'desc'}});
+  res.json({orders});
+});
+
+// Admin: get single order
+app.get('/admin/api/store/orders/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({error: 'Invalid ID'});
+  const order = await prisma.order.findUnique({
+    where: {id},
+    include:
+        {items: true, customer: {select: {id: true, name: true, email: true}}}
+  });
+  if (!order) return res.status(404).json({error: 'Not found'});
+  res.json({order});
+});
+
+// Admin: update order
+app.put('/admin/api/store/orders/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({error: 'Invalid ID'});
+  const {
+    status,
+    shipmentId,
+    notes,
+    customerName,
+    customerEmail,
+    customerPhone,
+    shippingAddress,
+    billingAddress
+  } = req.body;
+  const data = {};
+  if (status) {
+    const validStatuses = ['received', 'processing', 'shipped', 'finished'];
+    if (!validStatuses.includes(status))
+      return res.status(400).json({error: 'Invalid status'});
+    data.status = status;
+  }
+  if (shipmentId !== undefined)
+    data.shipmentId = String(shipmentId).trim().slice(0, 200);
+  if (notes !== undefined) data.notes = String(notes).trim().slice(0, 1000);
+  if (customerName !== undefined)
+    data.customerName = String(customerName).trim().slice(0, 100);
+  if (customerEmail !== undefined)
+    data.customerEmail = String(customerEmail).trim().slice(0, 200);
+  if (customerPhone !== undefined)
+    data.customerPhone = String(customerPhone).trim().slice(0, 30);
+  if (shippingAddress !== undefined)
+    data.shippingAddress = String(shippingAddress).trim().slice(0, 500);
+  if (billingAddress !== undefined)
+    data.billingAddress = String(billingAddress).trim().slice(0, 500);
+
+  const order = await prisma.order.update({where: {id}, data});
+  res.json({success: true, order});
+});
+
+// Admin: delete order
+app.delete('/admin/api/store/orders/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({error: 'Invalid ID'});
+  await prisma.order.delete({where: {id}});
+  res.json({success: true});
+});
+
+// Admin: create order (manual)
+app.post('/admin/api/store/orders', requireAuth, async (req, res) => {
+  const {
+    customerName,
+    customerEmail,
+    customerPhone,
+    shippingAddress,
+    billingAddress,
+    status,
+    notes,
+    items
+  } = req.body;
+  if (!customerName || !customerEmail)
+    return res.status(400).json({error: 'Name and email required'});
+
+  let total = 0;
+  const orderItems = [];
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      const product = await prisma.product.findUnique(
+          {where: {id: item.productId}, include: {options: true}});
+      if (!product) continue;
+      let price = product.price;
+      let optionName = '';
+      let optionId = null;
+      if (item.optionId) {
+        const opt = product.options.find(o => o.id === item.optionId);
+        if (opt) {
+          price = opt.price !== null ? opt.price : product.price;
+          optionName = opt.name;
+          optionId = opt.id;
+        }
+      }
+      const qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+      total += price * qty;
+      orderItems.push({
+        productId: product.id,
+        optionId,
+        productTitle: product.title,
+        optionName,
+        quantity: qty,
+        unitPrice: price
+      });
+    }
+  }
+
+  const order = await prisma.order.create({
+    data: {
+      customerName: String(customerName).trim().slice(0, 100),
+      customerEmail: String(customerEmail).trim().slice(0, 200),
+      customerPhone: String(customerPhone || '').trim().slice(0, 30),
+      shippingAddress: String(shippingAddress || '').trim().slice(0, 500),
+      billingAddress: String(billingAddress || '').trim().slice(0, 500),
+      status: status || 'received',
+      notes: String(notes || '').trim().slice(0, 1000),
+      total,
+      items: {create: orderItems}
+    },
+    include: {items: true}
+  });
+  res.json({success: true, order});
+});
+
+// Admin: list products
+app.get('/admin/api/store/products', requireAuth, async (req, res) => {
+  const products = await prisma.product.findMany(
+      {include: {options: true}, orderBy: {createdAt: 'desc'}});
+  res.json({products});
+});
+
+// Admin: create product
+app.post('/admin/api/store/products', requireAuth, async (req, res) => {
+  const upload =
+      makeProductUpload().array('images', PRODUCT_IMAGE_LIMITS.maxCount);
+  upload(req, res, async function(err) {
+    if (err) return res.status(400).json({error: err.message});
+
+    const {title, description, price, available, options} = req.body;
+    if (!title || !price)
+      return res.status(400).json({error: 'Title and price required'});
+
+    const images = (req.files || []).map(f => f.filename);
+    let parsedOptions = [];
+    if (options) {
+      try {
+        parsedOptions = JSON.parse(options);
+      } catch (e) { /* ignore */
+      }
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        title: String(title).trim().slice(0, 200),
+        description: String(description || '').trim().slice(0, 2000),
+        price: parseFloat(price) || 0,
+        available: available !== 'false',
+        images: JSON.stringify(images),
+        options: {
+          create: parsedOptions.map(
+              o => ({
+                name: String(o.name).trim().slice(0, 100),
+                price: o.price !== undefined && o.price !== '' ?
+                    parseFloat(o.price) :
+                    null,
+                available: o.available !== undefined && o.available !== '' ?
+                    o.available !== false && o.available !== 'false' :
+                    null,
+              }))
+        }
+      },
+      include: {options: true}
+    });
+    res.json({success: true, product});
+  });
+});
+
+// Admin: update product
+app.put('/admin/api/store/products/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({error: 'Invalid ID'});
+
+  const upload =
+      makeProductUpload().array('images', PRODUCT_IMAGE_LIMITS.maxCount);
+  upload(req, res, async function(err) {
+    if (err) return res.status(400).json({error: err.message});
+
+    const existing = await prisma.product.findUnique(
+        {where: {id}, include: {options: true}});
+    if (!existing) return res.status(404).json({error: 'Product not found'});
+
+    const {title, description, price, available, options, existingImages} =
+        req.body;
+    const data = {};
+    if (title !== undefined) data.title = String(title).trim().slice(0, 200);
+    if (description !== undefined)
+      data.description = String(description).trim().slice(0, 2000);
+    if (price !== undefined) data.price = parseFloat(price) || 0;
+    if (available !== undefined)
+      data.available = available !== 'false' && available !== false;
+
+    // Handle images: keep existing + add new uploads
+    let currentImages = [];
+    try {
+      currentImages = JSON.parse(existingImages || '[]');
+    } catch (e) {
+      currentImages = JSON.parse(existing.images);
+    }
+    const newImages = (req.files || []).map(f => f.filename);
+    const allImages = [...currentImages, ...newImages].slice(
+        0, PRODUCT_IMAGE_LIMITS.maxCount);
+    data.images = JSON.stringify(allImages);
+
+    // Delete removed images from disk
+    const oldImages = JSON.parse(existing.images);
+    const removed = oldImages.filter(img => !allImages.includes(img));
+    removed.forEach(img => {
+      const fp = path.join(COMPANY_DIR, 'images', 'products', img);
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    });
+
+    // Update options: delete all and recreate
+    if (options !== undefined) {
+      let parsedOptions = [];
+      try {
+        parsedOptions = JSON.parse(options);
+      } catch (e) { /* ignore */
+      }
+      await prisma.productOption.deleteMany({where: {productId: id}});
+      if (parsedOptions.length > 0) {
+        await prisma.productOption.createMany({
+          data: parsedOptions.map(
+              o => ({
+                productId: id,
+                name: String(o.name).trim().slice(0, 100),
+                price: o.price !== undefined && o.price !== '' &&
+                        o.price !== null ?
+                    parseFloat(o.price) :
+                    null,
+                available: o.available !== undefined && o.available !== '' &&
+                        o.available !== null ?
+                    o.available !== false && o.available !== 'false' :
+                    null,
+              }))
+        });
+      }
+    }
+
+    const product = await prisma.product.update(
+        {where: {id}, data, include: {options: true}});
+    res.json({success: true, product});
+  });
+});
+
+// Admin: delete product
+app.delete('/admin/api/store/products/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({error: 'Invalid ID'});
+
+  const product = await prisma.product.findUnique({where: {id}});
+  if (!product) return res.status(404).json({error: 'Not found'});
+
+  // Delete product images from disk
+  try {
+    const images = JSON.parse(product.images);
+    images.forEach(img => {
+      const fp = path.join(COMPANY_DIR, 'images', 'products', img);
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    });
+  } catch (e) { /* ignore */
+  }
+
+  await prisma.product.delete({where: {id}});
+  res.json({success: true});
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
@@ -827,7 +1617,7 @@ function makeUpload(folder) {
   const limits = IMAGE_LIMITS[folder] || {maxCount: 10, maxSizeMB: 5};
   const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-      const dir = path.join(__dirname, 'company', 'images', folder);
+      const dir = path.join(COMPANY_DIR, 'images', folder);
       fs.mkdirSync(dir, {recursive: true});
       cb(null, dir);
     },
@@ -900,7 +1690,7 @@ app.post(
 
         // For logo, remove old images first (only 1 allowed)
         if (folder === 'logo' && existing.length > 0) {
-          const dir = path.join(__dirname, 'company', 'images', 'logo');
+          const dir = path.join(COMPANY_DIR, 'images', 'logo');
           existing.forEach(f => {
             const fp = path.join(dir, f);
             if (fs.existsSync(fp)) fs.unlinkSync(fp);
@@ -927,8 +1717,7 @@ app.delete(
         return res.status(400).json({error: 'Invalid filename'});
       }
 
-      const filePath =
-          path.join(__dirname, 'company', 'images', folder, filename);
+      const filePath = path.join(COMPANY_DIR, 'images', folder, filename);
       if (!fs.existsSync(filePath))
         return res.status(404).json({error: 'File not found'});
 
@@ -960,7 +1749,7 @@ app.put(
       if (!Array.isArray(order))
         return res.status(400).json({error: 'order must be an array'});
 
-      const dir = path.join(__dirname, 'company', 'images', folder);
+      const dir = path.join(COMPANY_DIR, 'images', folder);
 
       // Validate all files exist
       for (const f of order) {

@@ -1,0 +1,46 @@
+# Docker Compose example for deploying multiple companies
+# Each service is the same image with different company data mounted
+
+services:
+  # Example: Company A
+  company-a:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/company_a
+      - SESSION_SECRET=random-secret-for-company-a
+      - COMPANY_DATA_PATH=/data/company
+      - STRIPE_SECRET_KEY=sk_live_xxx
+      - STRIPE_WEBHOOK_SECRET=whsec_xxx
+    volumes:
+      - ./deployments/company-a:/data/company
+    depends_on:
+      - db
+
+  # Example: Company B
+  company-b:
+    build: .
+    ports:
+      - "3002:3000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/company_b
+      - SESSION_SECRET=random-secret-for-company-b
+      - COMPANY_DATA_PATH=/data/company
+      - STRIPE_SECRET_KEY=sk_live_yyy
+      - STRIPE_WEBHOOK_SECRET=whsec_yyy
+    volumes:
+      - ./deployments/company-b:/data/company
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

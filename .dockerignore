@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+company
+deployments
+generated
+*.md
+.DS_Store
+Thumbs.db
+docker-compose.example.yml

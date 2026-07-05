@@ -1,0 +1,67 @@
+{
+  "companyName": "Your Company Name",
+  "companyEmail": "contact@yourcompany.com",
+  "companyPhoneNumbers": [
+    "+1 000 000 0000"
+  ],
+  "companySchedule": "Mon-Fri: 9AM-6PM | Sat-Sun: Closed",
+  "companyAddress": "123 Main Street, City, Country",
+  "companyDisclaimer": "© 2026 Your Company Name. All rights reserved.",
+  "companySlogan": "Your company slogan goes here.",
+  "companySloganSubtitle": "YOUR TAGLINE",
+  "companyPrimaryColor": "#1a1a1a",
+  "companySecondaryColor": "#c4956a",
+  "defaultVacationDays": 22,
+  "socialMedia": {
+    "whatsapp": "",
+    "instagram": "",
+    "facebook": "",
+    "x": "",
+    "linkedin": "",
+    "youtube": "",
+    "tiktok": "",
+    "github": "",
+    "pinterest": ""
+  },
+  "pages": {
+    "aboutUs": true,
+    "services": true,
+    "partners": true,
+    "contacts": true,
+    "gallery": true,
+    "bookings": true,
+    "vacations": true,
+    "store": false
+  },
+  "companyAboutUsTexts": [
+    "Tell your story here."
+  ],
+  "companyServiceList": [
+    {
+      "title": "Service 1",
+      "description": "Description of your service.",
+      "price": "$50"
+    }
+  ],
+  "companyGalleryDescriptions": {},
+  "bookingConfig": {
+    "slotDurationMinutes": 30,
+    "maxAdvanceDays": 30,
+    "schedule": {
+      "monday": { "open": "09:00", "close": "18:00" },
+      "tuesday": { "open": "09:00", "close": "18:00" },
+      "wednesday": { "open": "09:00", "close": "18:00" },
+      "thursday": { "open": "09:00", "close": "18:00" },
+      "friday": { "open": "09:00", "close": "18:00" },
+      "saturday": null,
+      "sunday": null
+    },
+    "bookableServices": [
+      {
+        "id": "service-1",
+        "title": "Service 1",
+        "durationMinutes": 30
+      }
+    ]
+  }
+}
