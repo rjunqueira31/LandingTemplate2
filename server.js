@@ -142,9 +142,33 @@ function getImages(subdir) {
       .sort();
 }
 
+// Page entitlements ("what the client paid for") are controlled per deployment
+// via the ENABLED_PAGES env var (comma-separated allowlist), NOT via data.json.
+// This keeps billing/plan config in the deployment layer, out of the volume.
+// Fail-closed: if ENABLED_PAGES is unset or empty, NO pages are enabled. Every
+// page must be opted in explicitly, so a forgotten variable can never leak a
+// feature the client didn't pay for.
+const ALL_PAGES = [
+  'aboutUs', 'services', 'partners', 'contacts', 'gallery', 'bookings',
+  'vacations', 'store'
+];
+
+const COMPANY_PAGES = (function() {
+  const raw = process.env.ENABLED_PAGES || '';
+  const enabled = raw.split(',').map(s => s.trim()).filter(Boolean);
+  const pages = {};
+  ALL_PAGES.forEach(p => {
+    pages[p] = enabled.includes(p);
+  });
+  return pages;
+})();
+
 app.use((req, res, next) => {
   const company = loadCompanyData();
   const logoImages = getImages('logo');
+
+  // Entitlements come from the deployment (ENABLED_PAGES), not data.json.
+  company.pages = COMPANY_PAGES;
 
   res.locals.company = company;
   res.locals.currentPath = req.path;
@@ -450,6 +474,7 @@ app.get('/admin/logout', (req, res) => {
 // Dashboard
 app.get('/admin', requireAuth, (req, res) => {
   const company = loadCompanyData();
+  company.pages = COMPANY_PAGES;
   res.render('admin/dashboard', {
     company,
     username: req.session.username,

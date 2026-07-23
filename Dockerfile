@@ -26,5 +26,8 @@ ENV PORT=3000
 
 EXPOSE 3000
 
-# Run migrations then start
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# Run migrations, ensure an admin user exists, then start.
+# The seed is best-effort (|| true) so the public site still boots even if the
+# admin can't be created yet (e.g. ADMIN_PASSWORD not set); it's idempotent and
+# skips when the admin already exists.
+CMD ["sh", "-c", "npx prisma migrate deploy && (node prisma/seed.js || true) && node server.js"]

@@ -11,6 +11,7 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/company_a
       - SESSION_SECRET=random-secret-for-company-a
       - COMPANY_DATA_PATH=/data/company
+      - ENABLED_PAGES=aboutUs,services,partners,contacts,gallery,bookings,vacations,store
       - STRIPE_SECRET_KEY=sk_live_xxx
       - STRIPE_WEBHOOK_SECRET=whsec_xxx
     volumes:
@@ -27,6 +28,7 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/company_b
       - SESSION_SECRET=random-secret-for-company-b
       - COMPANY_DATA_PATH=/data/company
+      - ENABLED_PAGES=aboutUs,services,partners,contacts,bookings
       - STRIPE_SECRET_KEY=sk_live_yyy
       - STRIPE_WEBHOOK_SECRET=whsec_yyy
     volumes:

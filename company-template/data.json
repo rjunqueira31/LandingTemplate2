@@ -23,16 +23,6 @@
     "github": "",
     "pinterest": ""
   },
-  "pages": {
-    "aboutUs": true,
-    "services": true,
-    "partners": true,
-    "contacts": true,
-    "gallery": true,
-    "bookings": true,
-    "vacations": true,
-    "store": false
-  },
   "companyAboutUsTexts": [
     "Tell your story here."
   ],

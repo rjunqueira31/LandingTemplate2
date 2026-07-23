@@ -10,20 +10,30 @@ const prisma = new PrismaClient();
 const COMPANY_DIR = path.resolve(process.env.COMPANY_DATA_PATH || path.join(__dirname, '..', 'company'));
 
 async function main() {
-  const existing = await prisma.user.findUnique({where: {username: 'admin'}});
+  const username = (process.env.ADMIN_USERNAME || 'admin').trim();
+  const existing = await prisma.user.findUnique({where: {username}});
 
   if (!existing) {
-    const hash = await bcrypt.hash('admin123', 10);
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password) {
+      console.error(
+          'ADMIN_PASSWORD env var is required to create the admin user.');
+      console.error(
+          'Set it (a strong, unique value), run the seed once, then remove it.');
+      process.exit(1);
+    }
+    const hash = await bcrypt.hash(password, 10);
     await prisma.user.create({
       data: {
-        username: 'admin',
+        username,
         passwordHash: hash,
         role: 'admin',
       },
     });
+    console.log(`Created admin user "${username}".`);
     console.log(
-        'Created default admin user (username: admin, password: admin123)');
-    console.log('Change the default password after first login!');
+        'Log in, change the password, then you can remove ADMIN_PASSWORD ' +
+        'from the environment (the DB stores only the hash).');
   } else {
     console.log('Admin user already exists, skipping.');
   }
