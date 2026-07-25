@@ -1875,8 +1875,9 @@ app.put(
       const allowed = [
         'companyName', 'companyEmail', 'companyPhoneNumbers', 'companySchedule',
         'companyAddress', 'companyDisclaimer', 'companySlogan',
-        'companySloganSubtitle'
+        'companySloganSubtitle', 'companyPrimaryColor', 'companySecondaryColor'
       ];
+      const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
       const company = loadCompanyData();
       const updates = req.body;
       allowed.forEach(key => {
@@ -1885,6 +1886,13 @@ app.put(
             company[key] = Array.isArray(updates[key]) ?
                 updates[key].map(p => String(p).trim().slice(0, 30)) :
                 [String(updates[key]).trim().slice(0, 30)];
+          } else if (
+              key === 'companyPrimaryColor' ||
+              key === 'companySecondaryColor') {
+            // Only accept valid hex colors — the value is injected into a
+            // <style> block, where HTML escaping would not stop CSS injection.
+            const val = String(updates[key]).trim();
+            if (HEX_COLOR.test(val)) company[key] = val;
           } else {
             company[key] = String(updates[key]).trim().slice(0, 500);
           }

@@ -713,7 +713,25 @@ document.addEventListener('DOMContentLoaded', function() {
           contentData.companySloganSubtitle || '';
       document.getElementById('cntCompanyDisclaimer').value =
           contentData.companyDisclaimer || '';
+      var primaryColor = contentData.companyPrimaryColor || '#000000';
+      var secondaryColor = contentData.companySecondaryColor || '#000000';
+      document.getElementById('cntCompanyPrimaryColor').value = primaryColor;
+      document.getElementById('cntCompanyPrimaryColorVal').textContent =
+          primaryColor;
+      document.getElementById('cntCompanySecondaryColor').value = secondaryColor;
+      document.getElementById('cntCompanySecondaryColorVal').textContent =
+          secondaryColor;
     }
+
+    // Live hex preview next to each color swatch
+    [['cntCompanyPrimaryColor', 'cntCompanyPrimaryColorVal'],
+     ['cntCompanySecondaryColor', 'cntCompanySecondaryColorVal']]
+        .forEach(function(pair) {
+          document.getElementById(pair[0])
+              .addEventListener('input', function() {
+                document.getElementById(pair[1]).textContent = this.value;
+              });
+        });
 
     document.getElementById('btnSaveCompanyInfo')
         .addEventListener('click', function() {
@@ -745,7 +763,11 @@ document.addEventListener('DOMContentLoaded', function() {
               companySloganSubtitle:
                   document.getElementById('cntCompanySloganSub').value,
               companyDisclaimer:
-                  document.getElementById('cntCompanyDisclaimer').value
+                  document.getElementById('cntCompanyDisclaimer').value,
+              companyPrimaryColor:
+                  document.getElementById('cntCompanyPrimaryColor').value,
+              companySecondaryColor:
+                  document.getElementById('cntCompanySecondaryColor').value
             })
           })
               .then(function(r) {
