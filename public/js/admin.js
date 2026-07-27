@@ -713,25 +713,363 @@ document.addEventListener('DOMContentLoaded', function() {
           contentData.companySloganSubtitle || '';
       document.getElementById('cntCompanyDisclaimer').value =
           contentData.companyDisclaimer || '';
-      var primaryColor = contentData.companyPrimaryColor || '#000000';
-      var secondaryColor = contentData.companySecondaryColor || '#000000';
-      document.getElementById('cntCompanyPrimaryColor').value = primaryColor;
-      document.getElementById('cntCompanyPrimaryColorVal').textContent =
-          primaryColor;
-      document.getElementById('cntCompanySecondaryColor').value = secondaryColor;
-      document.getElementById('cntCompanySecondaryColorVal').textContent =
-          secondaryColor;
+      setColorFieldValue(
+          'cntCompanyPrimaryColor', contentData.companyPrimaryColor);
+      setColorFieldValue(
+          'cntCompanySecondaryColor', contentData.companySecondaryColor);
     }
 
-    // Live hex preview next to each color swatch
-    [['cntCompanyPrimaryColor', 'cntCompanyPrimaryColorVal'],
-     ['cntCompanySecondaryColor', 'cntCompanySecondaryColorVal']]
-        .forEach(function(pair) {
-          document.getElementById(pair[0])
-              .addEventListener('input', function() {
-                document.getElementById(pair[1]).textContent = this.value;
-              });
+    // ============================
+    // CUSTOM COLOR PICKER (mobile-friendly, replaces native <input type=color>)
+    // ============================
+    function clampHex(str) {
+      if (!str && str !== 0) return null;
+      var v = String(str).trim().toLowerCase();
+      if (v.charAt(0) !== '#') v = '#' + v;
+      if (/^#[0-9a-f]{3}$/.test(v)) {
+        v = '#' + v.charAt(1) + v.charAt(1) + v.charAt(2) + v.charAt(2) +
+            v.charAt(3) + v.charAt(3);
+      }
+      return /^#[0-9a-f]{6}$/.test(v) ? v : null;
+    }
+
+    function hexToRgb(hex) {
+      return {
+        r: parseInt(hex.slice(1, 3), 16),
+        g: parseInt(hex.slice(3, 5), 16),
+        b: parseInt(hex.slice(5, 7), 16)
+      };
+    }
+
+    function rgbToHex(r, g, b) {
+      function h(n) {
+        n = Math.max(0, Math.min(255, Math.round(n)));
+        return ('0' + n.toString(16)).slice(-2);
+      }
+      return '#' + h(r) + h(g) + h(b);
+    }
+
+    function rgbToHsv(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+      var h = 0;
+      if (d) {
+        if (max === r) {
+          h = ((g - b) / d) % 6;
+        } else if (max === g) {
+          h = (b - r) / d + 2;
+        } else {
+          h = (r - g) / d + 4;
+        }
+        h *= 60;
+        if (h < 0) h += 360;
+      }
+      return {h: h, s: max === 0 ? 0 : d / max, v: max};
+    }
+
+    function hsvToRgb(h, s, v) {
+      var c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+      var r = 0, g = 0, b = 0;
+      if (h < 60) {
+        r = c;
+        g = x;
+      } else if (h < 120) {
+        r = x;
+        g = c;
+      } else if (h < 180) {
+        g = c;
+        b = x;
+      } else if (h < 240) {
+        g = x;
+        b = c;
+      } else if (h < 300) {
+        r = x;
+        b = c;
+      } else {
+        r = c;
+        b = x;
+      }
+      return {r: (r + m) * 255, g: (g + m) * 255, b: (b + m) * 255};
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+      var h = 0, s = 0, l = (max + min) / 2;
+      if (d) {
+        s = d / (1 - Math.abs(2 * l - 1));
+        if (max === r) {
+          h = ((g - b) / d) % 6;
+        } else if (max === g) {
+          h = (b - r) / d + 2;
+        } else {
+          h = (r - g) / d + 4;
+        }
+        h *= 60;
+        if (h < 0) h += 360;
+      }
+      return {h: h, s: s * 100, l: l * 100};
+    }
+
+    function hslToRgb(h, s, l) {
+      s /= 100;
+      l /= 100;
+      var c = (1 - Math.abs(2 * l - 1)) * s;
+      var x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      var m = l - c / 2, r = 0, g = 0, b = 0;
+      if (h < 60) {
+        r = c;
+        g = x;
+      } else if (h < 120) {
+        r = x;
+        g = c;
+      } else if (h < 180) {
+        g = c;
+        b = x;
+      } else if (h < 240) {
+        g = x;
+        b = c;
+      } else if (h < 300) {
+        r = x;
+        b = c;
+      } else {
+        r = c;
+        b = x;
+      }
+      return {r: (r + m) * 255, g: (g + m) * 255, b: (b + m) * 255};
+    }
+
+    function setColorFieldValue(id, hex) {
+      var c = clampHex(hex) || '#000000';
+      var hidden = document.getElementById(id);
+      if (hidden) hidden.value = c;
+      var text = document.getElementById(id + 'Val');
+      if (text) text.value = c;
+      var sw = document.getElementById(id + 'Swatch');
+      if (sw) sw.style.background = c;
+    }
+
+    function setupColorPickers() {
+      var pop = document.createElement('div');
+      pop.className = 'cp-popover';
+      pop.hidden = true;
+      pop.innerHTML = '<div class="cp-preview"></div>' +
+          '<div class="cp-fields">' +
+          '<select class="cp-mode" aria-label="Color format">' +
+          '<option value="hex">HEX</option>' +
+          '<option value="rgb">RGB</option>' +
+          '<option value="hsl">HSL</option></select>' +
+          '<div class="cp-inputs"></div></div>';
+      document.body.appendChild(pop);
+
+      var preview = pop.querySelector('.cp-preview');
+      var modeSelect = pop.querySelector('.cp-mode');
+      var inputsWrap = pop.querySelector('.cp-inputs');
+      var state = {field: null, r: 0, g: 0, b: 0};
+      var mode = 'hex';
+
+      function currentHex() {
+        return rgbToHex(state.r, state.g, state.b);
+      }
+
+      function render() {
+        preview.style.background = currentHex();
+        syncInputs();
+      }
+
+      function buildInputs() {
+        inputsWrap.innerHTML = '';
+        var specs;
+        if (mode === 'hex') {
+          specs = [{k: 'hex', type: 'text', max: 7, cls: 'cp-in-hex'}];
+        } else if (mode === 'rgb') {
+          specs = [
+            {k: 'r', min: 0, max: 255}, {k: 'g', min: 0, max: 255},
+            {k: 'b', min: 0, max: 255}
+          ];
+        } else {
+          specs = [
+            {k: 'h', min: 0, max: 360}, {k: 's', min: 0, max: 100},
+            {k: 'l', min: 0, max: 100}
+          ];
+        }
+        specs.forEach(function(spec) {
+          var inp = document.createElement('input');
+          inp.className = 'cp-in ' + (spec.cls || '');
+          if (spec.type === 'text') {
+            inp.type = 'text';
+            inp.maxLength = spec.max;
+            inp.spellcheck = false;
+            inp.autocomplete = 'off';
+            inp.setAttribute('autocapitalize', 'none');
+          } else {
+            inp.type = 'number';
+            inp.min = spec.min;
+            inp.max = spec.max;
+            inp.inputMode = 'numeric';
+          }
+          inp.dataset.k = spec.k;
+          inp.addEventListener('input', onInputEdit);
+          inp.addEventListener('blur', syncInputs);
+          inputsWrap.appendChild(inp);
         });
+        syncInputs();
+      }
+
+      function syncInputs() {
+        var fields = inputsWrap.querySelectorAll('.cp-in');
+        var hsl = rgbToHsl(state.r, state.g, state.b);
+        fields.forEach(function(inp) {
+          if (inp === document.activeElement) return;
+          var k = inp.dataset.k;
+          if (k === 'hex')
+            inp.value = currentHex();
+          else if (k === 'r')
+            inp.value = Math.round(state.r);
+          else if (k === 'g')
+            inp.value = Math.round(state.g);
+          else if (k === 'b')
+            inp.value = Math.round(state.b);
+          else if (k === 'h')
+            inp.value = Math.round(hsl.h);
+          else if (k === 's')
+            inp.value = Math.round(hsl.s);
+          else if (k === 'l')
+            inp.value = Math.round(hsl.l);
+        });
+      }
+
+      function onInputEdit() {
+        var fields = inputsWrap.querySelectorAll('.cp-in');
+        var vals = {};
+        fields.forEach(function(inp) {
+          vals[inp.dataset.k] = inp.value;
+        });
+        var rgb = null;
+        if (mode === 'hex') {
+          var c = clampHex(vals.hex);
+          if (c) rgb = hexToRgb(c);
+        } else if (mode === 'rgb') {
+          rgb = {
+            r: clampNum(vals.r, 0, 255),
+            g: clampNum(vals.g, 0, 255),
+            b: clampNum(vals.b, 0, 255)
+          };
+        } else {
+          rgb = hslToRgb(
+              clampNum(vals.h, 0, 360), clampNum(vals.s, 0, 100),
+              clampNum(vals.l, 0, 100));
+        }
+        if (!rgb) return;
+        state.r = rgb.r;
+        state.g = rgb.g;
+        state.b = rgb.b;
+        preview.style.background = currentHex();
+        syncInputs();
+        pushToField();
+      }
+
+      function clampNum(v, min, max) {
+        v = parseFloat(v);
+        if (isNaN(v)) v = min;
+        return Math.max(min, Math.min(max, v));
+      }
+
+      function pushToField() {
+        if (!state.field) return;
+        var hex = currentHex();
+        state.field.hidden.value = hex;
+        state.field.text.value = hex;
+        state.field.swatch.style.background = hex;
+      }
+
+      function seedFromHex(hex) {
+        var c = clampHex(hex) || '#000000';
+        var rgb = hexToRgb(c);
+        state.r = rgb.r;
+        state.g = rgb.g;
+        state.b = rgb.b;
+        render();
+      }
+
+      modeSelect.addEventListener('change', function() {
+        mode = this.value;
+        buildInputs();
+      });
+
+      function positionPopover(anchor) {
+        var r = anchor.getBoundingClientRect();
+        pop.style.top = (window.scrollY + r.bottom + 8) + 'px';
+        var left = window.scrollX + r.left;
+        var maxLeft = window.scrollX + document.documentElement.clientWidth -
+            pop.offsetWidth - 8;
+        pop.style.left = Math.max(8, Math.min(left, maxLeft)) + 'px';
+      }
+
+      function open(field, swatch) {
+        state.field = field;
+        seedFromHex(field.hidden.value);
+        pop.hidden = false;
+        pop._anchor = swatch;
+        positionPopover(swatch);
+      }
+
+      function close() {
+        pop.hidden = true;
+        state.field = null;
+        pop._anchor = null;
+      }
+
+      buildInputs();
+
+      ['cntCompanyPrimaryColor', 'cntCompanySecondaryColor'].forEach(function(
+          id) {
+        var field = {
+          hidden: document.getElementById(id),
+          text: document.getElementById(id + 'Val'),
+          swatch: document.getElementById(id + 'Swatch')
+        };
+        if (!field.hidden || !field.text || !field.swatch) return;
+
+        field.swatch.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (!pop.hidden && pop._anchor === field.swatch) {
+            close();
+          } else {
+            open(field, field.swatch);
+          }
+        });
+
+        field.text.addEventListener('input', function() {
+          var c = clampHex(this.value);
+          if (!c) return;
+          field.hidden.value = c;
+          field.swatch.style.background = c;
+          if (!pop.hidden && state.field === field) seedFromHex(c);
+        });
+        field.text.addEventListener('blur', function() {
+          var c = clampHex(this.value) || field.hidden.value || '#000000';
+          this.value = c;
+          field.hidden.value = c;
+          field.swatch.style.background = c;
+        });
+      });
+
+      document.addEventListener('click', function(e) {
+        if (pop.hidden || pop.contains(e.target)) return;
+        close();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') close();
+      });
+      window.addEventListener('resize', close);
+    }
+
+    setupColorPickers();
 
     document.getElementById('btnSaveCompanyInfo')
         .addEventListener('click', function() {

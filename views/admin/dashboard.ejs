@@ -216,18 +216,20 @@
                                             </div>
                                             <div class="color-fields">
                                                 <div class="color-field">
-                                                    <input type="color" class="color-swatch" id="cntCompanyPrimaryColor">
+                                                    <button type="button" class="color-swatch" id="cntCompanyPrimaryColorSwatch" aria-label="Open primary color picker"></button>
                                                     <div class="color-field-info">
                                                         <span class="color-field-name" data-i18n="cnt_primary_color">Primary Color</span>
-                                                        <span class="color-field-value" id="cntCompanyPrimaryColorVal">#000000</span>
+                                                        <input type="text" class="color-field-value" id="cntCompanyPrimaryColorVal" value="#000000" maxlength="7" spellcheck="false" autocomplete="off" autocapitalize="none" inputmode="text">
                                                     </div>
+                                                    <input type="hidden" id="cntCompanyPrimaryColor">
                                                 </div>
                                                 <div class="color-field">
-                                                    <input type="color" class="color-swatch" id="cntCompanySecondaryColor">
+                                                    <button type="button" class="color-swatch" id="cntCompanySecondaryColorSwatch" aria-label="Open secondary color picker"></button>
                                                     <div class="color-field-info">
                                                         <span class="color-field-name" data-i18n="cnt_secondary_color">Secondary Color</span>
-                                                        <span class="color-field-value" id="cntCompanySecondaryColorVal">#000000</span>
+                                                        <input type="text" class="color-field-value" id="cntCompanySecondaryColorVal" value="#000000" maxlength="7" spellcheck="false" autocomplete="off" autocapitalize="none" inputmode="text">
                                                     </div>
+                                                    <input type="hidden" id="cntCompanySecondaryColor">
                                                 </div>
                                             </div>
                                             <button class="btn-primary" id="btnSaveCompanyInfo"
