@@ -78,6 +78,20 @@ body.mobile-menu-open .nav-logo {
   pointer-events: none;
 }
 
+/* When the mobile menu is open, the fixed header sits above the sliding
+   menu and would swallow clicks on the menu's cart/user icons. Let clicks
+   pass through the header to the menu while keeping the hamburger (close)
+   button interactive. */
+body.mobile-menu-open header {
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-menu-open .hamburger {
+  pointer-events: auto;
+}
+
 .lang-btn {
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -265,9 +279,9 @@ header.scrolled {
 }
 
 nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
   max-width: 1400px;
   margin: 0 auto;
   position: relative;
@@ -277,15 +291,27 @@ nav {
 .nav-right {
   display: flex;
   gap: 28px;
-  flex: 1;
 }
 
 .nav-left {
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .nav-right {
   justify-content: flex-start;
+}
+
+.nav-right-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }
 
 .nav-logo {
@@ -1342,15 +1368,7 @@ footer {
 
 /* Dynamic collapse: applied by JS when nav overflows */
 header.nav-collapsed .nav-left,
-header.nav-collapsed .nav-right {
-  display: none;
-}
-
-header.nav-collapsed nav .lang-toggle {
-  display: none;
-}
-
-header.nav-collapsed .store-nav-icons {
+header.nav-collapsed .nav-right-group {
   display: none;
 }
 
@@ -1365,21 +1383,14 @@ header.nav-collapsed .nav-logo {
 }
 
 header.nav-collapsed nav {
+  display: flex;
   justify-content: center;
 }
 
 /* Small screen fallback: also applies layout tweaks */
 @media (max-width: 768px) {
   .nav-left,
-  .nav-right {
-    display: none;
-  }
-
-  nav .lang-toggle {
-    display: none;
-  }
-
-  .store-nav-icons {
+  .nav-right-group {
     display: none;
   }
 
@@ -1394,6 +1405,7 @@ header.nav-collapsed nav {
   }
 
   nav {
+    display: flex;
     justify-content: center;
   }
 
